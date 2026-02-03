@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:eurogrill-website-git-main-williamsilvaoliveiraas-projects.vercel.app)",
+      "Bash(npm create:*)",
+      "Bash(npx create-vite:*)",
+      "Bash(npm install)",
+      "Bash(npm install:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx vite --host)"
+    ]
+  }
+}
