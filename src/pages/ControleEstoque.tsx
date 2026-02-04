@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { useStock } from '../context/StockContext';
-import { Plus, X, Search, ArrowDownCircle, ArrowUpCircle, Filter } from 'lucide-react';
+import { Plus, X, Search, ArrowDownCircle, ArrowUpCircle, Filter, FileSpreadsheet } from 'lucide-react';
 
 export default function ControleEstoque() {
   const { products, movements, addMovement } = useStock();
@@ -51,6 +51,35 @@ export default function ControleEstoque() {
     return `${d}/${m}/${y}`;
   }
 
+  function handleCardClick(type: '' | 'entrada' | 'saida') {
+    setTypeFilter(prev => prev === type ? '' : type);
+  }
+
+  function exportToExcel() {
+    const headers = ['Data', 'Tipo', 'Produto', 'Quantidade', 'Observação'];
+    const rows = filtered.map(m => [
+      formatDate(m.date),
+      m.type === 'entrada' ? 'Entrada' : 'Saída',
+      m.productName,
+      m.quantity,
+      m.notes
+    ]);
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `movimentacoes_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -65,7 +94,11 @@ export default function ControleEstoque() {
       </div>
 
       <div className="stats-grid stats-grid-2">
-        <div className="stat-card">
+        <div
+          className={`stat-card clickable ${typeFilter === 'entrada' ? 'active' : ''}`}
+          onClick={() => handleCardClick('entrada')}
+          title="Clique para filtrar entradas"
+        >
           <div className="stat-icon success">
             <ArrowDownCircle size={22} />
           </div>
@@ -74,7 +107,11 @@ export default function ControleEstoque() {
             <span className="stat-value">{totalEntradas.toLocaleString('pt-BR')}</span>
           </div>
         </div>
-        <div className="stat-card">
+        <div
+          className={`stat-card clickable ${typeFilter === 'saida' ? 'active' : ''}`}
+          onClick={() => handleCardClick('saida')}
+          title="Clique para filtrar saídas"
+        >
           <div className="stat-icon">
             <ArrowUpCircle size={22} />
           </div>
@@ -108,6 +145,10 @@ export default function ControleEstoque() {
               <option value="saida">Saídas</option>
             </select>
           </div>
+          <button className="btn-secondary" onClick={exportToExcel}>
+            <FileSpreadsheet size={18} />
+            Exportar Excel
+          </button>
         </div>
 
         <table className="data-table">

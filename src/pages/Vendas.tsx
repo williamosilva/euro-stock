@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { useStock } from '../context/StockContext';
 import type { SaleItem, Installment } from '../data/mockData';
-import { Plus, X, ShoppingCart, Trash2, DollarSign, Receipt, CreditCard, Calendar } from 'lucide-react';
+import { Plus, X, ShoppingCart, Trash2, DollarSign, Receipt, CreditCard, Calendar, Search, Filter, FileSpreadsheet } from 'lucide-react';
 
 const PAYMENT_METHODS = [
   'Dinheiro',
@@ -15,6 +15,9 @@ const PAYMENT_METHODS = [
 export default function Vendas() {
   const { products, sales, addSale } = useStock();
   const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState('');
+  const [paymentFilter, setPaymentFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'' | 'avista' | 'parcelado' | 'negociado'>('');
 
   const today = new Date().toISOString().split('T')[0];
   const [customer, setCustomer] = useState('');
@@ -35,6 +38,15 @@ export default function Vendas() {
   const [selectedProductId, setSelectedProductId] = useState(0);
   const [selectedQty, setSelectedQty] = useState(1);
 
+  const filteredSales = sales.filter(sale => {
+    const matchesSearch = sale.customer.toLowerCase().includes(search.toLowerCase()) ||
+      sale.items.some(i => i.productName.toLowerCase().includes(search.toLowerCase()));
+    const matchesPayment = !paymentFilter || sale.paymentMethod === paymentFilter;
+    const matchesType = !typeFilter || sale.installmentType === typeFilter;
+    return matchesSearch && matchesPayment && matchesType;
+  });
+
+  const paymentMethods = [...new Set(sales.map(s => s.paymentMethod))];
   const totalVendas = sales.reduce((s, sale) => s + sale.total, 0);
   const saleTotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
@@ -163,6 +175,34 @@ export default function Vendas() {
     return 'Negociado';
   }
 
+  function exportToExcel() {
+    const headers = ['#', 'Data', 'Cliente', 'Pagamento', 'Tipo', 'Parcelas', 'Itens', 'Total'];
+    const rows = filteredSales.map(sale => [
+      sale.id,
+      formatDate(sale.date),
+      sale.customer,
+      sale.paymentMethod,
+      formatInstallmentType(sale.installmentType),
+      sale.installments.length,
+      sale.items.map(i => `${i.quantity}x ${i.productName}`).join(', '),
+      sale.total.toFixed(2).replace('.', ',')
+    ]);
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `vendas_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
+
   return (
     <div className="page">
       <div className="page-header">
@@ -198,6 +238,45 @@ export default function Vendas() {
       </div>
 
       <div className="table-container">
+        <div className="table-toolbar">
+          <div className="search-box">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Buscar por cliente ou produto..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <div className="filter-group">
+            <Filter size={16} />
+            <select
+              value={paymentFilter}
+              onChange={e => setPaymentFilter(e.target.value)}
+              className="filter-select"
+            >
+              <option value="">Todos pagamentos</option>
+              {paymentMethods.map(pm => (
+                <option key={pm} value={pm}>{pm}</option>
+              ))}
+            </select>
+          </div>
+          <select
+            value={typeFilter}
+            onChange={e => setTypeFilter(e.target.value as '' | 'avista' | 'parcelado' | 'negociado')}
+            className="filter-select"
+          >
+            <option value="">Todos tipos</option>
+            <option value="avista">À Vista</option>
+            <option value="parcelado">Parcelado</option>
+            <option value="negociado">Negociado</option>
+          </select>
+          <button className="btn-secondary" onClick={exportToExcel}>
+            <FileSpreadsheet size={18} />
+            Exportar Excel
+          </button>
+        </div>
+
         <table className="data-table">
           <thead>
             <tr>
@@ -211,14 +290,14 @@ export default function Vendas() {
             </tr>
           </thead>
           <tbody>
-            {sales.length === 0 ? (
+            {filteredSales.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="empty-state">Nenhuma venda registrada ainda.</div>
+                  <div className="empty-state">Nenhuma venda encontrada.</div>
                 </td>
               </tr>
             ) : (
-              sales.map(sale => (
+              filteredSales.map(sale => (
                 <tr key={sale.id}>
                   <td className="td-name">#{sale.id}</td>
                   <td>{formatDate(sale.date)}</td>

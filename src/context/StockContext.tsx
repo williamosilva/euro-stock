@@ -12,7 +12,6 @@ interface StockContextType {
   addMovement: (movement: Omit<StockMovement, 'id'>) => void;
   addSale: (customer: string, date: string, items: SaleItem[], paymentMethod: string, installmentType: 'avista' | 'parcelado' | 'negociado', installments: Installment[]) => void;
   addQuote: (customer: string, date: string, validUntil: string, items: QuoteItem[], observation: string, paymentConditions: PaymentCondition[]) => void;
-  updateQuoteStatus: (id: number, status: Quote['status']) => void;
 }
 
 const StockContext = createContext<StockContextType | null>(null);
@@ -89,12 +88,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
       observation,
       paymentConditions,
       subtotal,
-      status: 'pendente',
     }, ...prev]);
-  }
-
-  function updateQuoteStatus(id: number, status: Quote['status']) {
-    setQuotes(prev => prev.map(q => q.id === id ? { ...q, status } : q));
   }
 
   return (
@@ -109,7 +103,6 @@ export function StockProvider({ children }: { children: ReactNode }) {
       addMovement,
       addSale,
       addQuote,
-      updateQuoteStatus,
     }}>
       {children}
     </StockContext.Provider>

@@ -1,7 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { useStock } from '../context/StockContext';
 import type { Product } from '../data/mockData';
-import { Search, AlertTriangle, Package, TrendingDown, DollarSign, Archive, Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Search, AlertTriangle, Package, TrendingDown, DollarSign, Archive, Plus, Pencil, Trash2, X, FileSpreadsheet } from 'lucide-react';
+
+type StatFilter = 'all' | 'low';
 
 const EMPTY_FORM = { name: '', category: '', quantity: 0, minQuantity: 0, price: 0, unit: 'un' };
 
@@ -13,13 +15,15 @@ export default function Estoque() {
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null);
+  const [statFilter, setStatFilter] = useState<StatFilter>('all');
 
   const categories = [...new Set(products.map(p => p.category))];
 
   const filtered = products.filter(p => {
     const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
     const matchesCategory = !categoryFilter || p.category === categoryFilter;
-    return matchesSearch && matchesCategory;
+    const matchesStatFilter = statFilter === 'all' || (statFilter === 'low' && p.quantity <= p.minQuantity);
+    return matchesSearch && matchesCategory && matchesStatFilter;
   });
 
   const totalItems = products.reduce((sum, p) => sum + p.quantity, 0);
@@ -58,6 +62,38 @@ export default function Estoque() {
   function handleDelete(id: number) {
     deleteProduct(id);
     setDeleteConfirm(null);
+  }
+
+  function handleStatClick(filter: StatFilter) {
+    setStatFilter(prev => prev === filter ? 'all' : filter);
+  }
+
+  function exportToExcel() {
+    const headers = ['Produto', 'Categoria', 'Quantidade', 'Qtd. Mínima', 'Unidade', 'Preço Unit.', 'Valor Total', 'Status'];
+    const rows = filtered.map(p => [
+      p.name,
+      p.category,
+      p.quantity,
+      p.minQuantity,
+      p.unit,
+      p.price.toFixed(2).replace('.', ','),
+      (p.quantity * p.price).toFixed(2).replace('.', ','),
+      p.quantity <= p.minQuantity ? 'Estoque Baixo' : 'Normal'
+    ]);
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `estoque_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -101,7 +137,11 @@ export default function Estoque() {
             <span className="stat-value">R$ {totalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
           </div>
         </div>
-        <div className="stat-card">
+        <div
+          className={`stat-card clickable ${statFilter === 'low' ? 'active' : ''}`}
+          onClick={() => handleStatClick('low')}
+          title="Clique para filtrar produtos com estoque baixo"
+        >
           <div className="stat-icon warning">
             <TrendingDown size={22} />
           </div>
@@ -133,6 +173,10 @@ export default function Estoque() {
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
+          <button className="btn-secondary" onClick={exportToExcel}>
+            <FileSpreadsheet size={18} />
+            Exportar Excel
+          </button>
         </div>
 
         <table className="data-table">

@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import type { Quote } from '../data/mockData';
 import { X, Printer, Flame } from 'lucide-react';
 
@@ -14,10 +15,13 @@ export default function QuotePDF({ quote, onClose }: QuotePDFProps) {
   }
 
   function handlePrint() {
+    const originalTitle = document.title;
+    document.title = ' ';
     window.print();
+    document.title = originalTitle;
   }
 
-  return (
+  return createPortal(
     <div className="pdf-overlay">
       <div className="pdf-toolbar no-print">
         <span>Visualização do Orçamento #{quote.id}</span>
@@ -51,8 +55,8 @@ export default function QuotePDF({ quote, onClose }: QuotePDFProps) {
 
           {/* Company Info */}
           <div className="pdf-company-info">
-            <p>CNPJ: 00.000.000/0001-00 | Tel: (11) 99999-9999</p>
-            <p>Rua Exemplo, 123 - Centro - São Paulo/SP - CEP: 01000-000</p>
+            <p>CNPJ: 17.659.944/0001-78 | Tel: +55 19 99891-4958</p>
+            <p>Rua Padre Antonio Joaquim Gomes, 205 - Jardim Europa, Jaguariúna - SP, 13914-014</p>
           </div>
 
           {/* Client & Dates */}
@@ -80,9 +84,9 @@ export default function QuotePDF({ quote, onClose }: QuotePDFProps) {
               <thead>
                 <tr>
                   <th style={{ width: '40%' }}>Descrição</th>
-                  <th style={{ width: '15%' }}>Qtd</th>
-                  <th style={{ width: '20%' }}>Valor Unit.</th>
-                  <th style={{ width: '25%' }}>Subtotal</th>
+                  <th style={{ width: '15%', textAlign: 'center' }}>Qtd</th>
+                  <th style={{ width: '20%', textAlign: 'right' }}>Valor Unit.</th>
+                  <th style={{ width: '25%', textAlign: 'right' }}>Subtotal</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,13 +161,13 @@ export default function QuotePDF({ quote, onClose }: QuotePDFProps) {
               <p>Este orçamento é válido até <strong>{formatDate(quote.validUntil)}</strong>.</p>
               <p>Valores sujeitos a alteração sem aviso prévio após a data de validade.</p>
             </div>
-            <div className="pdf-signature">
-              <div className="pdf-signature-line"></div>
-              <p>Euro Grill - Assinatura</p>
+            <div className="pdf-generated-info">
+              <p>Documento gerado virtualmente em {new Date().toLocaleDateString('pt-BR')} às {new Date().toLocaleTimeString('pt-BR')}</p>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

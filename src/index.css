@@ -448,6 +448,10 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
+.table-toolbar > button:last-child {
+  margin-left: auto;
+}
+
 .search-box {
   display: flex;
   align-items: center;
@@ -709,6 +713,29 @@ body {
 .stat-icon.success {
   background: #F0FDF4;
   color: var(--success);
+}
+
+/* Clickable Stat Cards */
+.stat-card.clickable {
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.stat-card.clickable:hover {
+  border-color: var(--primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.stat-card.clickable.active {
+  border-color: var(--primary);
+  background: #FEF2F2;
+}
+
+/* Header Actions */
+.header-actions {
+  display: flex;
+  gap: 10px;
 }
 
 /* ========== MOVEMENTS ========== */
@@ -1637,50 +1664,65 @@ button:disabled {
   margin: 1mm 0;
 }
 
-.pdf-signature {
+.pdf-generated-info {
   text-align: center;
-  margin-top: 15mm;
+  margin-top: 8mm;
+  padding-top: 4mm;
+  border-top: 1px dashed #D1D5DB;
 }
 
-.pdf-signature-line {
-  width: 60mm;
-  height: 0;
-  border-bottom: 1px solid #1A1A1A;
-  margin: 0 auto 2mm;
-}
-
-.pdf-signature p {
-  font-size: 9pt;
-  color: #6B7280;
+.pdf-generated-info p {
+  font-size: 8pt;
+  color: #9CA3AF;
+  font-style: italic;
   margin: 0;
 }
 
 /* Print Styles */
 @media print {
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    overflow: visible !important;
+  }
+
   .no-print {
+    display: none !important;
+  }
+
+  /* Hide main app content when printing PDF */
+  #root {
     display: none !important;
   }
 
   .pdf-overlay {
     position: static;
-    background: none;
+    background: white;
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
   }
 
   .pdf-container {
     padding: 0;
     overflow: visible;
+    height: auto !important;
   }
 
   .pdf-page {
     width: 100%;
     min-height: auto;
+    height: auto;
     box-shadow: none;
-    padding: 10mm;
+    padding: 15mm;
     margin: 0;
-  }
-
-  @page {
-    size: A4;
-    margin: 10mm;
+    page-break-after: avoid;
+    page-break-inside: avoid;
   }
 }

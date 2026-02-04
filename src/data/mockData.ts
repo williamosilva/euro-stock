@@ -73,7 +73,6 @@ export interface Quote {
   observation: string;
   paymentConditions: PaymentCondition[];
   subtotal: number;
-  status: 'pendente' | 'aprovado' | 'recusado' | 'expirado';
 }
 
 export const MOCK_PRODUCTS: Product[] = [
@@ -169,7 +168,6 @@ export const MOCK_QUOTES: Quote[] = [
       { method: 'Boleto', installments: 1, discount: 3, finalValue: 2968.10 },
     ],
     subtotal: 3059.90,
-    status: 'pendente',
   },
   {
     id: 2,
@@ -188,7 +186,6 @@ export const MOCK_QUOTES: Quote[] = [
       { method: 'Cartão de Crédito', installments: 12, discount: 0, finalValue: 4380.00 },
     ],
     subtotal: 4380.00,
-    status: 'aprovado',
   },
   {
     id: 3,
@@ -205,6 +202,5 @@ export const MOCK_QUOTES: Quote[] = [
       { method: 'Transferência Bancária', installments: 1, discount: 10, finalValue: 3581.82 },
     ],
     subtotal: 3979.80,
-    status: 'expirado',
   },
 ];

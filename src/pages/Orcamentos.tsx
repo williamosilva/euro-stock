@@ -1,15 +1,22 @@
 import { useState, type FormEvent } from 'react';
 import { useStock } from '../context/StockContext';
 import type { QuoteItem, PaymentCondition, Quote } from '../data/mockData';
-import { Plus, X, FileText, Trash2, Percent, Clock, CheckCircle, XCircle, AlertCircle, MessageSquare, Edit3, FileDown } from 'lucide-react';
+import { Plus, X, FileText, Trash2, Percent, MessageSquare, Edit3, FileDown, Search, FileSpreadsheet } from 'lucide-react';
 import QuotePDF from '../components/QuotePDF';
 
 const PAYMENT_METHODS = ['PIX', 'Cartão de Crédito', 'Cartão de Débito', 'Boleto', 'Transferência Bancária', 'Dinheiro'];
 
 export default function Orcamentos() {
-  const { products, quotes, addQuote, updateQuoteStatus } = useStock();
+  const { products, quotes, addQuote } = useStock();
   const [showModal, setShowModal] = useState(false);
   const [pdfQuote, setPdfQuote] = useState<Quote | null>(null);
+  const [search, setSearch] = useState('');
+
+  const filteredQuotes = quotes.filter(q => {
+    const matchesSearch = q.customer.toLowerCase().includes(search.toLowerCase()) ||
+      q.items.some(i => i.productName.toLowerCase().includes(search.toLowerCase()));
+    return matchesSearch;
+  });
 
   const today = new Date().toISOString().split('T')[0];
   const defaultValidUntil = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
@@ -31,9 +38,6 @@ export default function Orcamentos() {
   const [condDiscount, setCondDiscount] = useState(0);
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-
-  const pendingCount = quotes.filter(q => q.status === 'pendente').length;
-  const approvedCount = quotes.filter(q => q.status === 'aprovado').length;
 
   function openModal() {
     setCustomer('');
@@ -120,17 +124,31 @@ export default function Orcamentos() {
     return `${d}/${m}/${y}`;
   }
 
-  function getStatusBadge(status: Quote['status']) {
-    switch (status) {
-      case 'pendente':
-        return <span className="status-badge pending"><Clock size={14} /> Pendente</span>;
-      case 'aprovado':
-        return <span className="status-badge ok"><CheckCircle size={14} /> Aprovado</span>;
-      case 'recusado':
-        return <span className="status-badge low"><XCircle size={14} /> Recusado</span>;
-      case 'expirado':
-        return <span className="status-badge expired"><AlertCircle size={14} /> Expirado</span>;
-    }
+  function exportToExcel() {
+    const headers = ['#', 'Data', 'Cliente', 'Itens', 'Subtotal', 'Validade', 'Observação'];
+    const rows = filteredQuotes.map(q => [
+      q.id,
+      formatDate(q.date),
+      q.customer,
+      q.items.map(i => `${i.quantity}x ${i.productName}`).join(', '),
+      q.subtotal.toFixed(2).replace('.', ','),
+      formatDate(q.validUntil),
+      q.observation
+    ]);
+
+    const csvContent = [
+      headers.join(';'),
+      ...rows.map(row => row.join(';'))
+    ].join('\n');
+
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `orcamentos_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -146,28 +164,23 @@ export default function Orcamentos() {
         </button>
       </div>
 
-      <div className="stats-grid stats-grid-2">
-        <div className="stat-card">
-          <div className="stat-icon warning">
-            <Clock size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Pendentes</span>
-            <span className="stat-value">{pendingCount}</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon success">
-            <CheckCircle size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Aprovados</span>
-            <span className="stat-value">{approvedCount}</span>
-          </div>
-        </div>
-      </div>
-
       <div className="table-container">
+        <div className="table-toolbar">
+          <div className="search-box">
+            <Search size={18} />
+            <input
+              type="text"
+              placeholder="Buscar por cliente ou produto..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
+          </div>
+          <button className="btn-secondary" onClick={exportToExcel}>
+            <FileSpreadsheet size={18} />
+            Exportar Excel
+          </button>
+        </div>
+
         <table className="data-table">
           <thead>
             <tr>
@@ -177,19 +190,18 @@ export default function Orcamentos() {
               <th>Itens</th>
               <th>Subtotal</th>
               <th>Validade</th>
-              <th>Status</th>
               <th>Ações</th>
             </tr>
           </thead>
           <tbody>
-            {quotes.length === 0 ? (
+            {filteredQuotes.length === 0 ? (
               <tr>
-                <td colSpan={8}>
-                  <div className="empty-state">Nenhum orçamento cadastrado.</div>
+                <td colSpan={7}>
+                  <div className="empty-state">Nenhum orçamento encontrado.</div>
                 </td>
               </tr>
             ) : (
-              quotes.map(quote => (
+              filteredQuotes.map(quote => (
                 <tr key={quote.id}>
                   <td className="td-name">#{quote.id}</td>
                   <td>{formatDate(quote.date)}</td>
@@ -204,7 +216,6 @@ export default function Orcamentos() {
                   </td>
                   <td className="td-name">R$ {quote.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                   <td>{formatDate(quote.validUntil)}</td>
-                  <td>{getStatusBadge(quote.status)}</td>
                   <td>
                     <div className="action-buttons">
                       <button
@@ -214,24 +225,6 @@ export default function Orcamentos() {
                       >
                         <FileDown size={16} />
                       </button>
-                      {quote.status === 'pendente' && (
-                        <>
-                          <button
-                            className="btn-icon success-icon"
-                            onClick={() => updateQuoteStatus(quote.id, 'aprovado')}
-                            title="Aprovar"
-                          >
-                            <CheckCircle size={16} />
-                          </button>
-                          <button
-                            className="btn-icon danger"
-                            onClick={() => updateQuoteStatus(quote.id, 'recusado')}
-                            title="Recusar"
-                          >
-                            <XCircle size={16} />
-                          </button>
-                        </>
-                      )}
                     </div>
                   </td>
                 </tr>
