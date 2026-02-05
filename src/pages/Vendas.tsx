@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { useStock } from "../context/StockContext";
 import { api } from "../services/api";
-import type { SaleItem, Installment, Product } from "../data/mockData";
+import type { SaleItem, Installment, Product, Sale } from "../data/mockData";
 import {
   Plus,
   X,
@@ -29,7 +29,7 @@ const PAYMENT_METHODS = [
 ];
 
 interface PaginatedSalesResponse {
-  data: any[];
+  data: Sale[];
   total: number;
   page: number;
   limit: number;
@@ -58,7 +58,7 @@ export default function Vendas() {
     : (rawProducts as PaginatedProductsResponse)?.data || [];
 
   // Paginação
-  const [sales, setSales] = useState<any[]>([]);
+  const [sales, setSales] = useState<Sale[]>([]);
   const [loadingSales, setLoadingSales] = useState(false);
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
