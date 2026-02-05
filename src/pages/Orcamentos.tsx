@@ -333,7 +333,7 @@ export default function Orcamentos() {
 
   if (loadingQuotes || loadingProducts) {
     return (
-      <div className="page">
+      <div className="page stock-page">
         <div className="loading-state">
           <Loader2 size={32} className="spin" />
           <p>Carregando orçamentos...</p>
@@ -343,26 +343,28 @@ export default function Orcamentos() {
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h2>Orçamentos</h2>
-          <p className="page-description">
-            Crie e gerencie orçamentos para clientes
-          </p>
+    <div className="page stock-page">
+      <div className="stock-hero">
+        <div className="page-header stock-header">
+          <div>
+            <h2>Orçamentos</h2>
+            <p className="page-description">
+              Crie e gerencie orçamentos para clientes
+            </p>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={openModal}
+            disabled={!products || products.length === 0}
+          >
+            <Plus size={18} />
+            Novo Orçamento
+          </button>
         </div>
-        <button
-          className="btn-primary"
-          onClick={openModal}
-          disabled={!products || products.length === 0}
-        >
-          <Plus size={18} />
-          Novo Orçamento
-        </button>
       </div>
 
-      <div className="table-container">
-        <div className="table-toolbar">
+      <div className="table-container stock-table">
+        <div className="table-toolbar stock-toolbar">
           <div className="search-group">
             <div className="search-box">
               <Search size={18} />

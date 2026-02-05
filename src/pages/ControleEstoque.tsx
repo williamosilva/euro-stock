@@ -220,7 +220,7 @@ export default function ControleEstoque() {
 
   if (loadingMovements || loadingProducts) {
     return (
-      <div className="page">
+      <div className="page stock-page">
         <div className="loading-state">
           <Loader2 size={32} className="spin" />
           <p>Carregando movimentações...</p>
@@ -230,59 +230,61 @@ export default function ControleEstoque() {
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h2>Controle de Estoque</h2>
-          <p className="page-description">
-            Registre entradas e saídas de produtos
-          </p>
+    <div className="page stock-page">
+      <div className="stock-hero">
+        <div className="page-header stock-header">
+          <div>
+            <h2>Controle de Estoque</h2>
+            <p className="page-description">
+              Registre entradas e saídas de produtos
+            </p>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={openModal}
+            disabled={!products || products.length === 0}
+          >
+            <Plus size={18} />
+            Nova Movimentação
+          </button>
         </div>
-        <button
-          className="btn-primary"
-          onClick={openModal}
-          disabled={!products || products.length === 0}
-        >
-          <Plus size={18} />
-          Nova Movimentação
-        </button>
+
+        <div className="stats-grid stats-grid-2 stock-stats">
+          <div
+            className={`stat-card clickable ${typeFilter === "entrada" ? "active" : ""}`}
+            onClick={() => handleCardClick("entrada")}
+            title="Clique para filtrar entradas"
+          >
+            <div className="stat-icon success">
+              <ArrowDownCircle size={22} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-label">Total Entradas</span>
+              <span className="stat-value">
+                {totalEntradas.toLocaleString("pt-BR")}
+              </span>
+            </div>
+          </div>
+          <div
+            className={`stat-card clickable ${typeFilter === "saida" ? "active" : ""}`}
+            onClick={() => handleCardClick("saida")}
+            title="Clique para filtrar saídas"
+          >
+            <div className="stat-icon">
+              <ArrowUpCircle size={22} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-label">Total Saídas</span>
+              <span className="stat-value">
+                {totalSaidas.toLocaleString("pt-BR")}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="stats-grid stats-grid-2">
-        <div
-          className={`stat-card clickable ${typeFilter === "entrada" ? "active" : ""}`}
-          onClick={() => handleCardClick("entrada")}
-          title="Clique para filtrar entradas"
-        >
-          <div className="stat-icon success">
-            <ArrowDownCircle size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Total Entradas</span>
-            <span className="stat-value">
-              {totalEntradas.toLocaleString("pt-BR")}
-            </span>
-          </div>
-        </div>
-        <div
-          className={`stat-card clickable ${typeFilter === "saida" ? "active" : ""}`}
-          onClick={() => handleCardClick("saida")}
-          title="Clique para filtrar saídas"
-        >
-          <div className="stat-icon">
-            <ArrowUpCircle size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Total Saídas</span>
-            <span className="stat-value">
-              {totalSaidas.toLocaleString("pt-BR")}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="table-container">
-        <div className="table-toolbar">
+      <div className="table-container stock-table">
+        <div className="table-toolbar stock-toolbar">
           <div className="search-group">
             <div className="search-box">
               <Search size={18} />

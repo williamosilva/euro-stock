@@ -1,10 +1,26 @@
-import { useState, useEffect, useCallback, type FormEvent } from 'react';
-import { useStock } from '../context/StockContext';
-import { api } from '../services/api';
-import type { Product } from '../data/mockData';
-import { Search, AlertTriangle, Package, TrendingDown, DollarSign, Archive, Plus, Pencil, Trash2, X, FileSpreadsheet, Loader2, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useStock } from "../context/StockContext";
+import { api } from "../services/api";
+import type { Product } from "../data/mockData";
+import {
+  Search,
+  AlertTriangle,
+  Package,
+  TrendingDown,
+  DollarSign,
+  Archive,
+  Plus,
+  Pencil,
+  Trash2,
+  X,
+  FileSpreadsheet,
+  Loader2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
-type StatFilter = 'all' | 'low';
+type StatFilter = "all" | "low";
 
 interface PaginatedResponse {
   data: Product[];
@@ -21,7 +37,14 @@ interface StockStats {
   lowStockCount: number;
 }
 
-const EMPTY_FORM = { name: '', category: '', quantity: 0, minQuantity: 0, price: 0, unit: 'un' };
+const EMPTY_FORM = {
+  name: "",
+  category: "",
+  quantity: 0,
+  minQuantity: 0,
+  price: 0,
+  unit: "un",
+};
 const LIMIT_OPTIONS = [10, 25, 50, 100];
 
 export default function Estoque() {
@@ -41,20 +64,24 @@ export default function Estoque() {
   const [loadingStats, setLoadingStats] = useState(false);
 
   // Filtros e UI
-  const [searchInput, setSearchInput] = useState('');
-  const [searchApplied, setSearchApplied] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('');
+  const [searchInput, setSearchInput] = useState("");
+  const [searchApplied, setSearchApplied] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [deleteConfirm, setDeleteConfirm] = useState<Product | null>(null);
   const [deleting, setDeleting] = useState(false);
-  const [statFilter, setStatFilter] = useState<StatFilter>('all');
+  const [statFilter, setStatFilter] = useState<StatFilter>("all");
   const [saving, setSaving] = useState(false);
-  const [apiCategories, setApiCategories] = useState<{ id: number; name: string }[]>([]);
+  const [apiCategories, setApiCategories] = useState<
+    { id: number; name: string }[]
+  >([]);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [filterCategories, setFilterCategories] = useState<{ id: number; name: string }[]>([]);
+  const [filterCategories, setFilterCategories] = useState<
+    { id: number; name: string }[]
+  >([]);
 
   // Carregar estatísticas
   const loadStats = useCallback(async () => {
@@ -64,7 +91,7 @@ export default function Estoque() {
       const data = await api.getStockStats();
       setStats(data);
     } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error);
+      console.error("Erro ao carregar estatísticas:", error);
     } finally {
       setLoadingStats(false);
     }
@@ -77,26 +104,39 @@ export default function Estoque() {
       const cats = await api.getCategories();
       setFilterCategories(cats);
     } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
+      console.error("Erro ao carregar categorias:", error);
     }
   }, []);
 
   // Carregar produtos com paginação, filtro de categoria e busca
-  const loadProducts = useCallback(async (pageNum: number, pageLimit: number, category?: string, search?: string) => {
-    if (!api.getToken()) return;
-    setLoadingProducts(true);
-    try {
-      const response = await api.getStock(pageNum, pageLimit, category || undefined, search || undefined) as PaginatedResponse;
-      setProducts(response.data);
-      setTotal(response.total);
-      setTotalPages(response.totalPages);
-      setPage(response.page);
-    } catch (error) {
-      console.error('Erro ao carregar produtos:', error);
-    } finally {
-      setLoadingProducts(false);
-    }
-  }, []);
+  const loadProducts = useCallback(
+    async (
+      pageNum: number,
+      pageLimit: number,
+      category?: string,
+      search?: string,
+    ) => {
+      if (!api.getToken()) return;
+      setLoadingProducts(true);
+      try {
+        const response = (await api.getStock(
+          pageNum,
+          pageLimit,
+          category || undefined,
+          search || undefined,
+        )) as PaginatedResponse;
+        setProducts(response.data);
+        setTotal(response.total);
+        setTotalPages(response.totalPages);
+        setPage(response.page);
+      } catch (error) {
+        console.error("Erro ao carregar produtos:", error);
+      } finally {
+        setLoadingProducts(false);
+      }
+    },
+    [],
+  );
 
   // Carregar dados iniciais (stats e categorias do filtro)
   useEffect(() => {
@@ -106,12 +146,19 @@ export default function Estoque() {
 
   // Carregar produtos quando mudar filtros ou limite
   useEffect(() => {
-    loadProducts(1, limit, categoryFilter || undefined, searchApplied || undefined);
+    loadProducts(
+      1,
+      limit,
+      categoryFilter || undefined,
+      searchApplied || undefined,
+    );
   }, [categoryFilter, searchApplied, limit, loadProducts]);
 
   // Filtro local (apenas estoque baixo - categoria e busca são filtradas via API)
-  const filtered = products.filter(p => {
-    const matchesStatFilter = statFilter === 'all' || (statFilter === 'low' && p.quantity <= p.minQuantity);
+  const filtered = products.filter((p) => {
+    const matchesStatFilter =
+      statFilter === "all" ||
+      (statFilter === "low" && p.quantity <= p.minQuantity);
     return matchesStatFilter;
   });
 
@@ -120,14 +167,14 @@ export default function Estoque() {
   }
 
   function handleSearchKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       handleSearch();
     }
   }
 
   function clearSearch() {
-    setSearchInput('');
-    setSearchApplied('');
+    setSearchInput("");
+    setSearchApplied("");
   }
 
   async function loadCategories() {
@@ -136,7 +183,7 @@ export default function Estoque() {
       const cats = await api.getCategories();
       setApiCategories(cats);
     } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
+      console.error("Erro ao carregar categorias:", error);
     } finally {
       setLoadingCategories(false);
     }
@@ -173,11 +220,16 @@ export default function Estoque() {
         await addProduct(form);
       }
       setShowModal(false);
-      loadProducts(page, limit, categoryFilter || undefined, searchApplied || undefined);
+      loadProducts(
+        page,
+        limit,
+        categoryFilter || undefined,
+        searchApplied || undefined,
+      );
       loadStats();
       loadFilterCategories();
     } catch {
-      alert('Erro ao salvar produto');
+      alert("Erro ao salvar produto");
     } finally {
       setSaving(false);
     }
@@ -189,32 +241,45 @@ export default function Estoque() {
     try {
       await deleteProduct(deleteConfirm.id);
       setDeleteConfirm(null);
-      loadProducts(page, limit, categoryFilter || undefined, searchApplied || undefined);
+      loadProducts(
+        page,
+        limit,
+        categoryFilter || undefined,
+        searchApplied || undefined,
+      );
       loadStats();
     } catch {
-      alert('Erro ao excluir produto');
+      alert("Erro ao excluir produto");
     } finally {
       setDeleting(false);
     }
   }
 
   function handleStatClick(filter: StatFilter) {
-    setStatFilter(prev => prev === filter ? 'all' : filter);
+    setStatFilter((prev) => (prev === filter ? "all" : filter));
   }
 
   function handlePageChange(newPage: number) {
     if (newPage >= 1 && newPage <= totalPages) {
-      loadProducts(newPage, limit, categoryFilter || undefined, searchApplied || undefined);
+      loadProducts(
+        newPage,
+        limit,
+        categoryFilter || undefined,
+        searchApplied || undefined,
+      );
     }
   }
 
   async function exportToExcel() {
     setExporting(true);
     try {
-      await api.exportStock(categoryFilter || undefined, searchApplied || undefined);
+      await api.exportStock(
+        categoryFilter || undefined,
+        searchApplied || undefined,
+      );
     } catch (error) {
-      console.error('Erro ao exportar:', error);
-      alert('Erro ao exportar Excel');
+      console.error("Erro ao exportar:", error);
+      alert("Erro ao exportar Excel");
     } finally {
       setExporting(false);
     }
@@ -222,7 +287,7 @@ export default function Estoque() {
 
   if (loadingProducts && products.length === 0) {
     return (
-      <div className="page">
+      <div className="page stock-page">
         <div className="loading-state">
           <Loader2 size={32} className="spin" />
           <p>Carregando estoque...</p>
@@ -232,71 +297,91 @@ export default function Estoque() {
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h2>Estoque</h2>
-          <p className="page-description">Gerencie todos os produtos do estoque</p>
+    <div className="page stock-page">
+      <div className="stock-hero">
+        <div className="page-header stock-header">
+          <div>
+            <h2>Estoque</h2>
+            <p className="page-description">
+              Gerencie todos os produtos do estoque
+            </p>
+          </div>
+          <button className="btn-primary" onClick={openAdd}>
+            <Plus size={18} />
+            Novo Produto
+          </button>
         </div>
-        <button className="btn-primary" onClick={openAdd}>
-          <Plus size={18} />
-          Novo Produto
-        </button>
+
+        <div className="stats-grid stock-stats">
+          <div className="stat-card">
+            <div className="stat-icon">
+              <Archive size={22} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-label">Total de Produtos</span>
+              <span className="stat-value">
+                {loadingStats ? (
+                  <Loader2 size={18} className="spin" />
+                ) : (
+                  (stats?.totalProducts ?? 0)
+                )}
+              </span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">
+              <Package size={22} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-label">Itens em Estoque</span>
+              <span className="stat-value">
+                {loadingStats ? (
+                  <Loader2 size={18} className="spin" />
+                ) : (
+                  (stats?.totalItems ?? 0).toLocaleString("pt-BR")
+                )}
+              </span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon blue">
+              <DollarSign size={22} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-label">Valor Total</span>
+              <span className="stat-value">
+                {loadingStats ? (
+                  <Loader2 size={18} className="spin" />
+                ) : (
+                  `R$ ${(stats?.totalValue ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`
+                )}
+              </span>
+            </div>
+          </div>
+          <div
+            className={`stat-card clickable ${statFilter === "low" ? "active" : ""}`}
+            onClick={() => handleStatClick("low")}
+            title="Clique para filtrar produtos com estoque baixo"
+          >
+            <div className="stat-icon warning">
+              <TrendingDown size={22} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-label">Estoque Baixo</span>
+              <span className="stat-value">
+                {loadingStats ? (
+                  <Loader2 size={18} className="spin" />
+                ) : (
+                  (stats?.lowStockCount ?? 0)
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-icon">
-            <Archive size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Total de Produtos</span>
-            <span className="stat-value">
-              {loadingStats ? <Loader2 size={18} className="spin" /> : stats?.totalProducts ?? 0}
-            </span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon">
-            <Package size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Itens em Estoque</span>
-            <span className="stat-value">
-              {loadingStats ? <Loader2 size={18} className="spin" /> : (stats?.totalItems ?? 0).toLocaleString('pt-BR')}
-            </span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon blue">
-            <DollarSign size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Valor Total</span>
-            <span className="stat-value">
-              {loadingStats ? <Loader2 size={18} className="spin" /> : `R$ ${(stats?.totalValue ?? 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
-            </span>
-          </div>
-        </div>
-        <div
-          className={`stat-card clickable ${statFilter === 'low' ? 'active' : ''}`}
-          onClick={() => handleStatClick('low')}
-          title="Clique para filtrar produtos com estoque baixo"
-        >
-          <div className="stat-icon warning">
-            <TrendingDown size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Estoque Baixo</span>
-            <span className="stat-value">
-              {loadingStats ? <Loader2 size={18} className="spin" /> : stats?.lowStockCount ?? 0}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="table-container">
-        <div className="table-toolbar">
+      <div className="table-container stock-table">
+        <div className="table-toolbar stock-toolbar">
           <div className="search-group">
             <div className="search-box">
               <Search size={18} />
@@ -304,11 +389,15 @@ export default function Estoque() {
                 type="text"
                 placeholder="Buscar produto..."
                 value={searchInput}
-                onChange={e => setSearchInput(e.target.value)}
+                onChange={(e) => setSearchInput(e.target.value)}
                 onKeyDown={handleSearchKeyDown}
               />
               {searchInput && (
-                <button className="search-clear" onClick={clearSearch} type="button">
+                <button
+                  className="search-clear"
+                  onClick={clearSearch}
+                  type="button"
+                >
                   <X size={16} />
                 </button>
               )}
@@ -320,24 +409,32 @@ export default function Estoque() {
           </div>
           <select
             value={categoryFilter}
-            onChange={e => setCategoryFilter(e.target.value)}
+            onChange={(e) => setCategoryFilter(e.target.value)}
             className="filter-select"
           >
             <option value="">Todas as categorias</option>
-            {filterCategories.map(c => (
-              <option key={c.id} value={c.name}>{c.name}</option>
+            {filterCategories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}
+              </option>
             ))}
           </select>
           <select
             value={limit}
-            onChange={e => setLimit(Number(e.target.value))}
+            onChange={(e) => setLimit(Number(e.target.value))}
             className="filter-select limit-select"
           >
-            {LIMIT_OPTIONS.map(opt => (
-              <option key={opt} value={opt}>{opt} por página</option>
+            {LIMIT_OPTIONS.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt} por página
+              </option>
             ))}
           </select>
-          <button className="btn-secondary" onClick={exportToExcel} disabled={exporting}>
+          <button
+            className="btn-secondary"
+            onClick={exportToExcel}
+            disabled={exporting}
+          >
             {exporting ? (
               <>
                 <Loader2 size={18} className="spin" />
@@ -375,18 +472,35 @@ export default function Estoque() {
                 </td>
               </tr>
             ) : (
-              filtered.map(product => {
-                const isLow = product.status === 'Baixo' || product.quantity <= product.minQuantity;
-                const valorTotal = product.valorTotal ?? (product.quantity * product.price);
+              filtered.map((product) => {
+                const isLow =
+                  product.status === "Baixo" ||
+                  product.quantity <= product.minQuantity;
+                const valorTotal =
+                  product.valorTotal ?? product.quantity * product.price;
                 return (
                   <tr key={product.id}>
                     <td className="td-name">{product.name}</td>
-                    <td><span className="badge">{product.category}</span></td>
-                    <td className={isLow ? 'text-danger' : ''}>{product.quantity}</td>
+                    <td>
+                      <span className="badge">{product.category}</span>
+                    </td>
+                    <td className={isLow ? "text-danger" : ""}>
+                      {product.quantity}
+                    </td>
                     <td>{product.minQuantity}</td>
                     <td>{product.unit}</td>
-                    <td>R$ {product.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                    <td>R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                    <td>
+                      R${" "}
+                      {product.price.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </td>
+                    <td>
+                      R${" "}
+                      {valorTotal.toLocaleString("pt-BR", {
+                        minimumFractionDigits: 2,
+                      })}
+                    </td>
                     <td>
                       {isLow ? (
                         <span className="status-badge low">
@@ -399,10 +513,18 @@ export default function Estoque() {
                     </td>
                     <td>
                       <div className="action-buttons">
-                        <button className="btn-icon edit" onClick={() => openEdit(product)} title="Editar">
+                        <button
+                          className="btn-icon edit"
+                          onClick={() => openEdit(product)}
+                          title="Editar"
+                        >
                           <Pencil size={16} />
                         </button>
-                        <button className="btn-icon danger" onClick={() => setDeleteConfirm(product)} title="Excluir">
+                        <button
+                          className="btn-icon danger"
+                          onClick={() => setDeleteConfirm(product)}
+                          title="Excluir"
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -422,7 +544,8 @@ export default function Estoque() {
         {totalPages > 1 && (
           <div className="pagination">
             <div className="pagination-info">
-              Mostrando {((page - 1) * limit) + 1} - {Math.min(page * limit, total)} de {total} produtos
+              Mostrando {(page - 1) * limit + 1} -{" "}
+              {Math.min(page * limit, total)} de {total} produtos
             </div>
             <div className="pagination-controls">
               <button
@@ -435,14 +558,19 @@ export default function Estoque() {
               </button>
 
               {Array.from({ length: totalPages }, (_, i) => i + 1)
-                .filter(p => p === 1 || p === totalPages || (p >= page - 1 && p <= page + 1))
+                .filter(
+                  (p) =>
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= page - 1 && p <= page + 1),
+                )
                 .map((p, index, arr) => (
                   <span key={p}>
                     {index > 0 && arr[index - 1] !== p - 1 && (
                       <span className="pagination-ellipsis">...</span>
                     )}
                     <button
-                      className={`pagination-btn ${p === page ? 'active' : ''}`}
+                      className={`pagination-btn ${p === page ? "active" : ""}`}
                       onClick={() => handlePageChange(p)}
                     >
                       {p}
@@ -465,9 +593,9 @@ export default function Estoque() {
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>{editingProduct ? 'Editar Produto' : 'Novo Produto'}</h3>
+              <h3>{editingProduct ? "Editar Produto" : "Novo Produto"}</h3>
               <button className="btn-icon" onClick={() => setShowModal(false)}>
                 <X size={20} />
               </button>
@@ -478,7 +606,7 @@ export default function Estoque() {
                 <input
                   type="text"
                   value={form.name}
-                  onChange={e => setForm({ ...form, name: e.target.value })}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                   required
                   disabled={saving}
                 />
@@ -490,10 +618,18 @@ export default function Estoque() {
                     <input
                       type="text"
                       value={form.category}
-                      onChange={e => setForm({ ...form, category: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, category: e.target.value })
+                      }
                       onFocus={() => setShowCategoryDropdown(true)}
-                      onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
-                      placeholder={loadingCategories ? 'Carregando...' : 'Selecione ou digite'}
+                      onBlur={() =>
+                        setTimeout(() => setShowCategoryDropdown(false), 200)
+                      }
+                      placeholder={
+                        loadingCategories
+                          ? "Carregando..."
+                          : "Selecione ou digite"
+                      }
                       required
                       disabled={saving}
                     />
@@ -501,28 +637,43 @@ export default function Estoque() {
                     {showCategoryDropdown && apiCategories.length > 0 && (
                       <div className="category-dropdown">
                         {apiCategories
-                          .filter(cat => cat.name.toLowerCase().includes(form.category.toLowerCase()))
-                          .map(cat => (
+                          .filter((cat) =>
+                            cat.name
+                              .toLowerCase()
+                              .includes(form.category.toLowerCase()),
+                          )
+                          .map((cat) => (
                             <div
                               key={cat.id}
-                              className={`category-option ${form.category === cat.name ? 'selected' : ''}`}
-                              onMouseDown={() => setForm({ ...form, category: cat.name })}
+                              className={`category-option ${form.category === cat.name ? "selected" : ""}`}
+                              onMouseDown={() =>
+                                setForm({ ...form, category: cat.name })
+                              }
                             >
                               {cat.name}
                             </div>
                           ))}
-                        {form.category && !apiCategories.some(cat => cat.name.toLowerCase() === form.category.toLowerCase()) && (
-                          <div className="category-option new-category">
-                            Criar: "{form.category}"
-                          </div>
-                        )}
+                        {form.category &&
+                          !apiCategories.some(
+                            (cat) =>
+                              cat.name.toLowerCase() ===
+                              form.category.toLowerCase(),
+                          ) && (
+                            <div className="category-option new-category">
+                              Criar: "{form.category}"
+                            </div>
+                          )}
                       </div>
                     )}
                   </div>
                 </div>
                 <div className="form-group">
                   <label>Unidade</label>
-                  <select value={form.unit} onChange={e => setForm({ ...form, unit: e.target.value })} disabled={saving}>
+                  <select
+                    value={form.unit}
+                    onChange={(e) => setForm({ ...form, unit: e.target.value })}
+                    disabled={saving}
+                  >
                     <option value="un">Unidade</option>
                     <option value="kit">Kit</option>
                     <option value="saco">Saco</option>
@@ -538,7 +689,9 @@ export default function Estoque() {
                     type="number"
                     min="0"
                     value={form.quantity}
-                    onChange={e => setForm({ ...form, quantity: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setForm({ ...form, quantity: Number(e.target.value) })
+                    }
                     required
                     disabled={saving}
                   />
@@ -549,7 +702,9 @@ export default function Estoque() {
                     type="number"
                     min="0"
                     value={form.minQuantity}
-                    onChange={e => setForm({ ...form, minQuantity: Number(e.target.value) })}
+                    onChange={(e) =>
+                      setForm({ ...form, minQuantity: Number(e.target.value) })
+                    }
                     required
                     disabled={saving}
                   />
@@ -562,13 +717,20 @@ export default function Estoque() {
                   min="0"
                   step="0.01"
                   value={form.price}
-                  onChange={e => setForm({ ...form, price: Number(e.target.value) })}
+                  onChange={(e) =>
+                    setForm({ ...form, price: Number(e.target.value) })
+                  }
                   required
                   disabled={saving}
                 />
               </div>
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)} disabled={saving}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowModal(false)}
+                  disabled={saving}
+                >
                   Cancelar
                 </button>
                 <button type="submit" className="btn-primary" disabled={saving}>
@@ -577,8 +739,10 @@ export default function Estoque() {
                       <Loader2 size={16} className="spin" />
                       Salvando...
                     </>
+                  ) : editingProduct ? (
+                    "Salvar"
                   ) : (
-                    editingProduct ? 'Salvar' : 'Adicionar'
+                    "Adicionar"
                   )}
                 </button>
               </div>
@@ -588,11 +752,21 @@ export default function Estoque() {
       )}
 
       {deleteConfirm && (
-        <div className="modal-overlay" onClick={() => !deleting && setDeleteConfirm(null)}>
-          <div className="modal modal-delete" onClick={e => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => !deleting && setDeleteConfirm(null)}
+        >
+          <div
+            className="modal modal-delete"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h3>Confirmar Exclusão</h3>
-              <button className="btn-icon" onClick={() => setDeleteConfirm(null)} disabled={deleting}>
+              <button
+                className="btn-icon"
+                onClick={() => setDeleteConfirm(null)}
+                disabled={deleting}
+              >
                 <X size={20} />
               </button>
             </div>

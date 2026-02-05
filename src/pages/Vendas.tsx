@@ -360,7 +360,7 @@ export default function Vendas() {
 
   if (loadingSales || loadingProducts) {
     return (
-      <div className="page">
+      <div className="page stock-page">
         <div className="loading-state">
           <Loader2 size={32} className="spin" />
           <p>Carregando vendas...</p>
@@ -370,52 +370,54 @@ export default function Vendas() {
   }
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <div>
-          <h2>Lançar Venda</h2>
-          <p className="page-description">
-            Registre vendas e acompanhe o histórico
-          </p>
+    <div className="page stock-page">
+      <div className="stock-hero">
+        <div className="page-header stock-header">
+          <div>
+            <h2>Lançar Venda</h2>
+            <p className="page-description">
+              Registre vendas e acompanhe o histórico
+            </p>
+          </div>
+          <button
+            className="btn-primary"
+            onClick={openModal}
+            disabled={!products || products.length === 0}
+          >
+            <Plus size={18} />
+            Nova Venda
+          </button>
         </div>
-        <button
-          className="btn-primary"
-          onClick={openModal}
-          disabled={!products || products.length === 0}
-        >
-          <Plus size={18} />
-          Nova Venda
-        </button>
+
+        <div className="stats-grid stats-grid-2 stock-stats">
+          <div className="stat-card">
+            <div className="stat-icon blue">
+              <Receipt size={22} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-label">Vendas Realizadas</span>
+              <span className="stat-value">{sales.length}</span>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon success">
+              <DollarSign size={22} />
+            </div>
+            <div className="stat-info">
+              <span className="stat-label">Faturamento Total</span>
+              <span className="stat-value">
+                R${" "}
+                {totalVendas.toLocaleString("pt-BR", {
+                  minimumFractionDigits: 2,
+                })}
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <div className="stats-grid stats-grid-2">
-        <div className="stat-card">
-          <div className="stat-icon blue">
-            <Receipt size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Vendas Realizadas</span>
-            <span className="stat-value">{sales.length}</span>
-          </div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-icon success">
-            <DollarSign size={22} />
-          </div>
-          <div className="stat-info">
-            <span className="stat-label">Faturamento Total</span>
-            <span className="stat-value">
-              R${" "}
-              {totalVendas.toLocaleString("pt-BR", {
-                minimumFractionDigits: 2,
-              })}
-            </span>
-          </div>
-        </div>
-      </div>
-
-      <div className="table-container">
-        <div className="table-toolbar">
+      <div className="table-container stock-table">
+        <div className="table-toolbar stock-toolbar">
           <div className="search-group">
             <div className="search-box">
               <Search size={18} />
