@@ -1,32 +1,144 @@
-import { useState, type FormEvent } from 'react';
-import { useStock } from '../context/StockContext';
-import type { QuoteItem, PaymentCondition, Quote } from '../data/mockData';
-import { Plus, X, FileText, Trash2, Percent, MessageSquare, Edit3, FileDown, Search, FileSpreadsheet } from 'lucide-react';
-import QuotePDF from '../components/QuotePDF';
+import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useStock } from "../context/StockContext";
+import { api } from "../services/api";
+import type { QuoteItem, PaymentCondition, Product } from "../data/mockData";
+import QuotePDF from "../components/QuotePDF";
+import {
+  Plus,
+  X,
+  FileText,
+  Trash2,
+  Percent,
+  MessageSquare,
+  Edit3,
+  FileDown,
+  Search,
+  FileSpreadsheet,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 
-const PAYMENT_METHODS = ['PIX', 'Cartão de Crédito', 'Cartão de Débito', 'Boleto', 'Transferência Bancária', 'Dinheiro'];
+const PAYMENT_METHODS = [
+  "PIX",
+  "Cartão de Crédito",
+  "Cartão de Débito",
+  "Boleto",
+  "Transferência Bancária",
+  "Dinheiro",
+];
+
+interface PaginatedQuotesResponse {
+  data: any[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+interface PaginatedProductsResponse {
+  data: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 export default function Orcamentos() {
-  const { products, quotes, addQuote } = useStock();
+  const {
+    products: rawProducts,
+    addQuote,
+    loadingProducts,
+    refreshProducts,
+  } = useStock();
+
+  // Garantir que products seja sempre um array válido
+  const products: Product[] = Array.isArray(rawProducts)
+    ? (rawProducts as Product[])
+    : (rawProducts as PaginatedProductsResponse)?.data || [];
+
+  // Paginação
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [loadingQuotes, setLoadingQuotes] = useState(false);
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [exporting, setExporting] = useState(false);
+  const [pdfQuote, setPdfQuote] = useState<any>(null);
+
   const [showModal, setShowModal] = useState(false);
-  const [pdfQuote, setPdfQuote] = useState<Quote | null>(null);
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState("");
+  const [searchApplied, setSearchApplied] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("");
+  const [validityFilter, setValidityFilter] = useState<
+    "" | "valid" | "expired"
+  >("");
 
-  const filteredQuotes = quotes.filter(q => {
-    const matchesSearch = q.customer.toLowerCase().includes(search.toLowerCase()) ||
-      q.items.some(i => i.productName.toLowerCase().includes(search.toLowerCase()));
-    return matchesSearch;
-  });
+  // Carregar produtos iniciais
+  useEffect(() => {
+    refreshProducts();
+  }, [refreshProducts]);
 
-  const today = new Date().toISOString().split('T')[0];
-  const defaultValidUntil = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  // Carregar orçamentos com filtros
+  const loadQuotes = useCallback(
+    async (
+      pageNum: number,
+      pageLimit: number,
+      customer?: string,
+      paymentMethod?: string,
+      validityStatus?: string,
+    ) => {
+      if (!api.getToken()) return;
+      setLoadingQuotes(true);
+      try {
+        const response = (await api.getQuotes(
+          pageNum,
+          pageLimit,
+          customer || undefined,
+          undefined, // productName - não implementado na UI ainda
+          paymentMethod || undefined,
+          validityStatus || undefined,
+        )) as PaginatedQuotesResponse;
+        setQuotes(response.data);
+        setTotal(response.total);
+        setTotalPages(response.totalPages);
+        setPage(response.page);
+      } catch (error) {
+        console.error("Erro ao carregar orçamentos:", error);
+      } finally {
+        setLoadingQuotes(false);
+      }
+    },
+    [],
+  );
 
-  const [customer, setCustomer] = useState('');
+  // Carregar orçamentos quando mudar filtros ou limite
+  useEffect(() => {
+    loadQuotes(
+      1,
+      limit,
+      searchApplied || undefined,
+      paymentFilter || undefined,
+      validityFilter || undefined,
+    );
+  }, [searchApplied, paymentFilter, validityFilter, limit, loadQuotes]);
+
+  const today = new Date().toISOString().split("T")[0];
+
+  const [customer, setCustomer] = useState("");
   const [date, setDate] = useState(today);
-  const [validUntil, setValidUntil] = useState(defaultValidUntil);
-  const [observation, setObservation] = useState('');
+  const [validUntil, setValidUntil] = useState(
+    () =>
+      new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .split("T")[0],
+  );
+  const [observation, setObservation] = useState("");
   const [items, setItems] = useState<QuoteItem[]>([]);
-  const [paymentConditions, setPaymentConditions] = useState<PaymentCondition[]>([]);
+  const [paymentConditions, setPaymentConditions] = useState<
+    PaymentCondition[]
+  >([]);
 
   // Add item form
   const [selectedProductId, setSelectedProductId] = useState(0);
@@ -39,11 +151,50 @@ export default function Orcamentos() {
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
 
+  function handleSearch() {
+    setSearchApplied(searchInput);
+  }
+
+  function handleSearchKeyDown(e: React.KeyboardEvent) {
+    if (e.key === "Enter") {
+      handleSearch();
+    }
+  }
+
+  function clearSearch() {
+    setSearchInput("");
+    setSearchApplied("");
+  }
+
+  function handlePageChange(newPage: number) {
+    if (newPage >= 1 && newPage <= totalPages) {
+      loadQuotes(
+        newPage,
+        limit,
+        searchApplied || undefined,
+        paymentFilter || undefined,
+        validityFilter || undefined,
+      );
+    }
+  }
+
   function openModal() {
-    setCustomer('');
+    // Verificar se há produtos disponíveis
+    if (!products || products.length === 0) {
+      alert(
+        "Nenhum produto encontrado. Adicione produtos primeiro no estoque.",
+      );
+      return;
+    }
+    setCustomer("");
     setDate(today);
-    setValidUntil(defaultValidUntil);
-    setObservation('');
+    setValidUntil(
+      () =>
+        new Date(Date.now() + 15 * 24 * 60 * 60 * 1000)
+          .toISOString()
+          .split("T")[0],
+    );
+    setObservation("");
     setItems([]);
     setPaymentConditions([]);
     setSelectedProductId(products[0]?.id || 0);
@@ -55,36 +206,47 @@ export default function Orcamentos() {
   }
 
   function addItem() {
-    const product = products.find(p => p.id === selectedProductId);
+    const product = products.find((p) => p.id === selectedProductId);
     if (!product || selectedQty <= 0) return;
 
-    const existing = items.find(i => i.productId === selectedProductId);
+    const existing = items.find((i) => i.productId === selectedProductId);
     if (existing) {
-      setItems(items.map(i =>
-        i.productId === selectedProductId
-          ? { ...i, quantity: i.quantity + selectedQty }
-          : i
-      ));
+      setItems(
+        items.map((i) =>
+          i.productId === selectedProductId
+            ? { ...i, quantity: i.quantity + selectedQty }
+            : i,
+        ),
+      );
     } else {
-      setItems([...items, {
-        productId: product.id,
-        productName: product.name,
-        quantity: selectedQty,
-        unitPrice: product.price,
-        originalPrice: product.price,
-        observation: '',
-      }]);
+      setItems([
+        ...items,
+        {
+          productId: product.id,
+          productName: product.name,
+          quantity: selectedQty,
+          unitPrice: product.price,
+          originalPrice: product.price,
+          observation: "",
+        },
+      ]);
     }
     setSelectedQty(1);
   }
 
-  function updateItem(index: number, field: keyof QuoteItem, value: string | number) {
-    setItems(items.map((item, i) => {
-      if (i === index) {
-        return { ...item, [field]: value };
-      }
-      return item;
-    }));
+  function updateItem(
+    index: number,
+    field: keyof QuoteItem,
+    value: string | number,
+  ) {
+    setItems(
+      items.map((item, i) => {
+        if (i === index) {
+          return { ...item, [field]: value };
+        }
+        return item;
+      }),
+    );
   }
 
   function removeItem(index: number) {
@@ -94,12 +256,15 @@ export default function Orcamentos() {
   function addPaymentCondition() {
     if (subtotal <= 0) return;
     const finalValue = subtotal * (1 - condDiscount / 100);
-    setPaymentConditions([...paymentConditions, {
-      method: condMethod,
-      installments: condInstallments,
-      discount: condDiscount,
-      finalValue,
-    }]);
+    setPaymentConditions([
+      ...paymentConditions,
+      {
+        method: condMethod,
+        installments: condInstallments,
+        discount: condDiscount,
+        finalValue,
+      },
+    ]);
     setCondDiscount(0);
     setCondInstallments(1);
   }
@@ -108,47 +273,73 @@ export default function Orcamentos() {
     setPaymentConditions(paymentConditions.filter((_, i) => i !== index));
   }
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    if (!customer.trim() || items.length === 0 || paymentConditions.length === 0) {
-      alert('Preencha o cliente, adicione itens e pelo menos uma condição de pagamento.');
+    if (
+      !customer.trim() ||
+      items.length === 0 ||
+      paymentConditions.length === 0
+    ) {
+      alert(
+        "Preencha o cliente, adicione itens e pelo menos uma condição de pagamento.",
+      );
       return;
     }
-    addQuote(customer, date, validUntil, items, observation, paymentConditions);
+    await addQuote(
+      customer,
+      date,
+      validUntil,
+      items,
+      observation,
+      paymentConditions,
+    );
     setShowModal(false);
+    // Recarregar orçamentos após adicionar
+    loadQuotes(
+      page,
+      limit,
+      searchApplied || undefined,
+      paymentFilter || undefined,
+      validityFilter || undefined,
+    );
   }
 
   function formatDate(dateStr: string) {
-    if (!dateStr) return '-';
-    const [y, m, d] = dateStr.split('-');
+    if (!dateStr) return "-";
+    const [y, m, d] = dateStr.split("-");
     return `${d}/${m}/${y}`;
   }
 
-  function exportToExcel() {
-    const headers = ['#', 'Data', 'Cliente', 'Itens', 'Subtotal', 'Validade', 'Observação'];
-    const rows = filteredQuotes.map(q => [
-      q.id,
-      formatDate(q.date),
-      q.customer,
-      q.items.map(i => `${i.quantity}x ${i.productName}`).join(', '),
-      q.subtotal.toFixed(2).replace('.', ','),
-      formatDate(q.validUntil),
-      q.observation
-    ]);
+  const handlePdfExport = (quote: any) => {
+    setPdfQuote(quote);
+  };
 
-    const csvContent = [
-      headers.join(';'),
-      ...rows.map(row => row.join(';'))
-    ].join('\n');
+  const handleExportExcel = async () => {
+    setExporting(true);
+    try {
+      await api.exportQuotes(
+        searchApplied || undefined,
+        undefined, // productName - não implementado na UI ainda
+        paymentFilter || undefined,
+        validityFilter || undefined,
+      );
+    } catch (error) {
+      console.error("Erro ao exportar:", error);
+      alert("Erro ao exportar Excel");
+    } finally {
+      setExporting(false);
+    }
+  };
 
-    const BOM = '\uFEFF';
-    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `orcamentos_${new Date().toISOString().split('T')[0]}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+  if (loadingQuotes || loadingProducts) {
+    return (
+      <div className="page">
+        <div className="loading-state">
+          <Loader2 size={32} className="spin" />
+          <p>Carregando orçamentos...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -156,9 +347,15 @@ export default function Orcamentos() {
       <div className="page-header">
         <div>
           <h2>Orçamentos</h2>
-          <p className="page-description">Crie e gerencie orçamentos para clientes</p>
+          <p className="page-description">
+            Crie e gerencie orçamentos para clientes
+          </p>
         </div>
-        <button className="btn-primary" onClick={openModal}>
+        <button
+          className="btn-primary"
+          onClick={openModal}
+          disabled={!products || products.length === 0}
+        >
           <Plus size={18} />
           Novo Orçamento
         </button>
@@ -166,18 +363,80 @@ export default function Orcamentos() {
 
       <div className="table-container">
         <div className="table-toolbar">
-          <div className="search-box">
-            <Search size={18} />
-            <input
-              type="text"
-              placeholder="Buscar por cliente ou produto..."
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
+          <div className="search-group">
+            <div className="search-box">
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Buscar por cliente..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={handleSearchKeyDown}
+              />
+              {searchInput && (
+                <button
+                  className="search-clear"
+                  onClick={clearSearch}
+                  type="button"
+                >
+                  <X size={16} />
+                </button>
+              )}
+            </div>
+            <button className="btn-primary btn-search" onClick={handleSearch}>
+              <Search size={16} />
+              Buscar
+            </button>
           </div>
-          <button className="btn-secondary" onClick={exportToExcel}>
-            <FileSpreadsheet size={18} />
-            Exportar Excel
+          <select
+            value={paymentFilter}
+            onChange={(e) => setPaymentFilter(e.target.value)}
+            className="filter-select"
+          >
+            <option value="">Todos pagamentos</option>
+            {PAYMENT_METHODS.map((pm) => (
+              <option key={pm} value={pm}>
+                {pm}
+              </option>
+            ))}
+          </select>
+          <select
+            value={validityFilter}
+            onChange={(e) =>
+              setValidityFilter(e.target.value as "" | "valid" | "expired")
+            }
+            className="filter-select"
+          >
+            <option value="">Todas validades</option>
+            <option value="valid">Válidos</option>
+            <option value="expired">Expirados</option>
+          </select>
+          <select
+            value={limit}
+            onChange={(e) => setLimit(Number(e.target.value))}
+            className="filter-select limit-select"
+          >
+            <option value={10}>10 por página</option>
+            <option value={25}>25 por página</option>
+            <option value={50}>50 por página</option>
+            <option value={100}>100 por página</option>
+          </select>
+          <button
+            className="btn-secondary"
+            onClick={handleExportExcel}
+            disabled={exporting}
+          >
+            {exporting ? (
+              <>
+                <Loader2 size={18} className="spin" />
+                Exportando...
+              </>
+            ) : (
+              <>
+                <FileSpreadsheet size={18} />
+                Exportar Excel
+              </>
+            )}
           </button>
         </div>
 
@@ -194,33 +453,51 @@ export default function Orcamentos() {
             </tr>
           </thead>
           <tbody>
-            {filteredQuotes.length === 0 ? (
+            {loadingQuotes ? (
+              <tr>
+                <td colSpan={7} className="loading-row">
+                  <Loader2 size={20} className="spin" />
+                  <span>Carregando...</span>
+                </td>
+              </tr>
+            ) : quotes.length === 0 ? (
               <tr>
                 <td colSpan={7}>
-                  <div className="empty-state">Nenhum orçamento encontrado.</div>
+                  <div className="empty-state">
+                    Nenhum orçamento encontrado.
+                  </div>
                 </td>
               </tr>
             ) : (
-              filteredQuotes.map(quote => (
+              quotes.map((quote) => (
                 <tr key={quote.id}>
                   <td className="td-name">#{quote.id}</td>
                   <td>{formatDate(quote.date)}</td>
                   <td>{quote.customer}</td>
                   <td>
                     <div className="sale-items-list">
-                      {quote.items.slice(0, 2).map((item, idx) => (
-                        <span key={idx} className="badge">{item.quantity}x {item.productName}</span>
+                      {quote.items.slice(0, 2).map((item: any, idx: number) => (
+                        <span key={idx} className="badge">
+                          {item.quantity}x {item.productName}
+                        </span>
                       ))}
-                      {quote.items.length > 2 && <span className="badge">+{quote.items.length - 2}</span>}
+                      {quote.items.length > 2 && (
+                        <span className="badge">+{quote.items.length - 2}</span>
+                      )}
                     </div>
                   </td>
-                  <td className="td-name">R$ {quote.subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="td-name">
+                    R${" "}
+                    {quote.subtotal.toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                    })}
+                  </td>
                   <td>{formatDate(quote.validUntil)}</td>
                   <td>
                     <div className="action-buttons">
                       <button
                         className="btn-icon edit"
-                        onClick={() => setPdfQuote(quote)}
+                        onClick={() => handlePdfExport(quote)}
                         title="Exportar PDF"
                       >
                         <FileDown size={16} />
@@ -232,11 +509,61 @@ export default function Orcamentos() {
             )}
           </tbody>
         </table>
+
+        {/* Paginação */}
+        {totalPages > 1 && (
+          <div className="pagination">
+            <div className="pagination-info">
+              Mostrando {(page - 1) * limit + 1} -{" "}
+              {Math.min(page * limit, total)} de {total} orçamentos
+            </div>
+            <div className="pagination-controls">
+              <button
+                className="btn-icon"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={page === 1}
+                title="Página anterior"
+              >
+                <ChevronLeft size={18} />
+              </button>
+
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(
+                  (p) =>
+                    p === 1 ||
+                    p === totalPages ||
+                    (p >= page - 1 && p <= page + 1),
+                )
+                .map((p, index, arr) => (
+                  <span key={p}>
+                    {index > 0 && arr[index - 1] !== p - 1 && (
+                      <span className="pagination-ellipsis">...</span>
+                    )}
+                    <button
+                      className={`pagination-btn ${p === page ? "active" : ""}`}
+                      onClick={() => handlePageChange(p)}
+                    >
+                      {p}
+                    </button>
+                  </span>
+                ))}
+
+              <button
+                className="btn-icon"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={page === totalPages}
+                title="Próxima página"
+              >
+                <ChevronRight size={18} />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showModal && (
         <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal modal-xl" onClick={e => e.stopPropagation()}>
+          <div className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Novo Orçamento</h3>
               <button className="btn-icon" onClick={() => setShowModal(false)}>
@@ -251,7 +578,7 @@ export default function Orcamentos() {
                   <input
                     type="text"
                     value={customer}
-                    onChange={e => setCustomer(e.target.value)}
+                    onChange={(e) => setCustomer(e.target.value)}
                     placeholder="Nome do cliente"
                     required
                   />
@@ -261,7 +588,7 @@ export default function Orcamentos() {
                   <input
                     type="date"
                     value={date}
-                    onChange={e => setDate(e.target.value)}
+                    onChange={(e) => setDate(e.target.value)}
                     required
                   />
                 </div>
@@ -270,7 +597,7 @@ export default function Orcamentos() {
                   <input
                     type="date"
                     value={validUntil}
-                    onChange={e => setValidUntil(e.target.value)}
+                    onChange={(e) => setValidUntil(e.target.value)}
                     required
                   />
                 </div>
@@ -278,16 +605,23 @@ export default function Orcamentos() {
 
               {/* Add Item */}
               <div className="quote-section">
-                <label className="section-label"><FileText size={16} /> Itens do Orçamento</label>
+                <label className="section-label">
+                  <FileText size={16} /> Itens do Orçamento
+                </label>
                 <div className="sale-add-row">
                   <select
                     value={selectedProductId}
-                    onChange={e => setSelectedProductId(Number(e.target.value))}
+                    onChange={(e) =>
+                      setSelectedProductId(Number(e.target.value))
+                    }
                     className="sale-product-select"
                   >
-                    {products.map(p => (
+                    {products.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.name} — R$ {p.price.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        {p.name} — R${" "}
+                        {p.price.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
                       </option>
                     ))}
                   </select>
@@ -295,11 +629,15 @@ export default function Orcamentos() {
                     type="number"
                     min="1"
                     value={selectedQty}
-                    onChange={e => setSelectedQty(Number(e.target.value))}
+                    onChange={(e) => setSelectedQty(Number(e.target.value))}
                     className="sale-qty-input"
                     placeholder="Qtd"
                   />
-                  <button type="button" className="btn-primary btn-sm" onClick={addItem}>
+                  <button
+                    type="button"
+                    className="btn-primary btn-sm"
+                    onClick={addItem}
+                  >
                     <Plus size={16} />
                   </button>
                 </div>
@@ -309,8 +647,14 @@ export default function Orcamentos() {
                     {items.map((item, idx) => (
                       <div key={idx} className="quote-item-card">
                         <div className="quote-item-header">
-                          <span className="quote-item-name">{item.productName}</span>
-                          <button type="button" className="btn-icon danger btn-xs" onClick={() => removeItem(idx)}>
+                          <span className="quote-item-name">
+                            {item.productName}
+                          </span>
+                          <button
+                            type="button"
+                            className="btn-icon danger btn-xs"
+                            onClick={() => removeItem(idx)}
+                          >
                             <Trash2 size={14} />
                           </button>
                         </div>
@@ -321,7 +665,13 @@ export default function Orcamentos() {
                               type="number"
                               min="1"
                               value={item.quantity}
-                              onChange={e => updateItem(idx, 'quantity', Number(e.target.value))}
+                              onChange={(e) =>
+                                updateItem(
+                                  idx,
+                                  "quantity",
+                                  Number(e.target.value),
+                                )
+                              }
                             />
                           </div>
                           <div className="quote-field">
@@ -331,11 +681,18 @@ export default function Orcamentos() {
                               min="0"
                               step="0.01"
                               value={item.unitPrice}
-                              onChange={e => updateItem(idx, 'unitPrice', Number(e.target.value))}
+                              onChange={(e) =>
+                                updateItem(
+                                  idx,
+                                  "unitPrice",
+                                  Number(e.target.value),
+                                )
+                              }
                             />
                             {item.unitPrice !== item.originalPrice && (
                               <span className="price-diff">
-                                <Edit3 size={12} /> Original: R$ {item.originalPrice.toFixed(2)}
+                                <Edit3 size={12} /> Original: R${" "}
+                                {item.originalPrice.toFixed(2)}
                               </span>
                             )}
                           </div>
@@ -344,19 +701,33 @@ export default function Orcamentos() {
                             <input
                               type="text"
                               value={item.observation}
-                              onChange={e => updateItem(idx, 'observation', e.target.value)}
+                              onChange={(e) =>
+                                updateItem(idx, "observation", e.target.value)
+                              }
                               placeholder="Ex: Cor específica, tamanho..."
                             />
                           </div>
                         </div>
                         <div className="quote-item-subtotal">
-                          Subtotal: <strong>R$ {(item.quantity * item.unitPrice).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                          Subtotal:{" "}
+                          <strong>
+                            R${" "}
+                            {(item.quantity * item.unitPrice).toLocaleString(
+                              "pt-BR",
+                              { minimumFractionDigits: 2 },
+                            )}
+                          </strong>
                         </div>
                       </div>
                     ))}
                     <div className="quote-total-bar">
                       <span>Total dos Itens:</span>
-                      <strong>R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      <strong>
+                        R${" "}
+                        {subtotal.toLocaleString("pt-BR", {
+                          minimumFractionDigits: 2,
+                        })}
+                      </strong>
                     </div>
                   </div>
                 )}
@@ -364,10 +735,12 @@ export default function Orcamentos() {
 
               {/* General Observation */}
               <div className="form-group">
-                <label><MessageSquare size={14} /> Observação Geral</label>
+                <label>
+                  <MessageSquare size={14} /> Observação Geral
+                </label>
                 <textarea
                   value={observation}
-                  onChange={e => setObservation(e.target.value)}
+                  onChange={(e) => setObservation(e.target.value)}
                   placeholder="Observações gerais do orçamento (frete, prazos, condições especiais...)"
                   rows={2}
                   className="textarea-field"
@@ -376,25 +749,33 @@ export default function Orcamentos() {
 
               {/* Payment Conditions */}
               <div className="quote-section">
-                <label className="section-label"><Percent size={16} /> Condições de Pagamento</label>
+                <label className="section-label">
+                  <Percent size={16} /> Condições de Pagamento
+                </label>
                 <div className="payment-condition-form">
                   <select
                     value={condMethod}
-                    onChange={e => setCondMethod(e.target.value)}
+                    onChange={(e) => setCondMethod(e.target.value)}
                     className="filter-select"
                   >
-                    {PAYMENT_METHODS.map(pm => (
-                      <option key={pm} value={pm}>{pm}</option>
+                    {PAYMENT_METHODS.map((pm) => (
+                      <option key={pm} value={pm}>
+                        {pm}
+                      </option>
                     ))}
                   </select>
                   <div className="cond-field">
                     <label>Parcelas</label>
                     <select
                       value={condInstallments}
-                      onChange={e => setCondInstallments(Number(e.target.value))}
+                      onChange={(e) =>
+                        setCondInstallments(Number(e.target.value))
+                      }
                     >
-                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(n => (
-                        <option key={n} value={n}>{n}x</option>
+                      {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n) => (
+                        <option key={n} value={n}>
+                          {n}x
+                        </option>
                       ))}
                     </select>
                   </div>
@@ -405,7 +786,7 @@ export default function Orcamentos() {
                       min="0"
                       max="100"
                       value={condDiscount}
-                      onChange={e => setCondDiscount(Number(e.target.value))}
+                      onChange={(e) => setCondDiscount(Number(e.target.value))}
                     />
                   </div>
                   <button
@@ -426,18 +807,36 @@ export default function Orcamentos() {
                           <span className="cond-method">{cond.method}</span>
                           <span className="cond-details">
                             {cond.installments}x
-                            {cond.discount > 0 && <span className="cond-discount"> (-{cond.discount}%)</span>}
+                            {cond.discount > 0 && (
+                              <span className="cond-discount">
+                                {" "}
+                                (-{cond.discount}%)
+                              </span>
+                            )}
                           </span>
                         </div>
                         <div className="cond-value">
-                          R$ {cond.finalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          R${" "}
+                          {cond.finalValue.toLocaleString("pt-BR", {
+                            minimumFractionDigits: 2,
+                          })}
                           {cond.installments > 1 && (
                             <span className="cond-installment-value">
-                              ({cond.installments}x de R$ {(cond.finalValue / cond.installments).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                              ({cond.installments}x de R${" "}
+                              {(
+                                cond.finalValue / cond.installments
+                              ).toLocaleString("pt-BR", {
+                                minimumFractionDigits: 2,
+                              })}
+                              )
                             </span>
                           )}
                         </div>
-                        <button type="button" className="btn-icon danger btn-xs" onClick={() => removePaymentCondition(idx)}>
+                        <button
+                          type="button"
+                          className="btn-icon danger btn-xs"
+                          onClick={() => removePaymentCondition(idx)}
+                        >
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -447,13 +846,21 @@ export default function Orcamentos() {
               </div>
 
               <div className="modal-actions">
-                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowModal(false)}
+                >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   className="btn-primary"
-                  disabled={!customer.trim() || items.length === 0 || paymentConditions.length === 0}
+                  disabled={
+                    !customer.trim() ||
+                    items.length === 0 ||
+                    paymentConditions.length === 0
+                  }
                 >
                   <FileText size={16} />
                   Criar Orçamento

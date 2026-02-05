@@ -1,22 +1,32 @@
 import { useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Flame } from 'lucide-react';
+import { Flame, Loader2 } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError('');
-    if (login(email, password)) {
-      navigate('/estoque');
-    } else {
-      setError('E-mail ou senha inválidos.');
+    setLoading(true);
+
+    try {
+      const success = await login(email, password);
+      if (success) {
+        navigate('/estoque');
+      } else {
+        setError('E-mail ou senha inválidos.');
+      }
+    } catch {
+      setError('Erro ao conectar com o servidor.');
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -43,6 +53,7 @@ export default function Login() {
               onChange={e => setEmail(e.target.value)}
               placeholder="seu@email.com"
               required
+              disabled={loading}
             />
           </div>
 
@@ -55,11 +66,19 @@ export default function Login() {
               onChange={e => setPassword(e.target.value)}
               placeholder="••••••••"
               required
+              disabled={loading}
             />
           </div>
 
-          <button type="submit" className="btn-primary btn-full">
-            Entrar
+          <button type="submit" className="btn-primary btn-full" disabled={loading}>
+            {loading ? (
+              <>
+                <Loader2 size={18} className="spin" />
+                Entrando...
+              </>
+            ) : (
+              'Entrar'
+            )}
           </button>
 
           <div className="login-hint">

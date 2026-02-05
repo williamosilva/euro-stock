@@ -12,6 +12,8 @@ export interface Product {
   minQuantity: number;
   price: number;
   unit: string;
+  valorTotal?: number;
+  status?: 'Normal' | 'Baixo';
 }
 
 export interface StockMovement {

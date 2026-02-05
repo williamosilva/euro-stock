@@ -7,6 +7,7 @@ import ControleEstoque from './pages/ControleEstoque';
 import Vendas from './pages/Vendas';
 import Orcamentos from './pages/Orcamentos';
 import Layout from './components/Layout';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
   return (
@@ -15,13 +16,15 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Login />} />
-            <Route element={<Layout />}>
-              <Route path="/estoque" element={<Estoque />} />
-              <Route path="/controle" element={<ControleEstoque />} />
-              <Route path="/vendas" element={<Vendas />} />
-              <Route path="/orcamentos" element={<Orcamentos />} />
+            <Route element={<ProtectedRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/estoque" element={<Estoque />} />
+                <Route path="/controle" element={<ControleEstoque />} />
+                <Route path="/vendas" element={<Vendas />} />
+                <Route path="/orcamentos" element={<Orcamentos />} />
+              </Route>
             </Route>
-            <Route path="*" element={<Navigate to="/" replace />} />
+            <Route path="*" element={<Navigate to="/estoque" replace />} />
           </Routes>
         </BrowserRouter>
       </StockProvider>
