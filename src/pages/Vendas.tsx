@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { useStock } from "../context/StockContext";
 import { api } from "../services/api";
-import type { SaleItem, Installment } from "../data/mockData";
+import type { SaleItem, Installment, Product } from "../data/mockData";
 import {
   Plus,
   X,
@@ -36,6 +36,14 @@ interface PaginatedSalesResponse {
   totalPages: number;
 }
 
+interface PaginatedProductsResponse {
+  data: Product[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
 export default function Vendas() {
   const {
     products: rawProducts,
@@ -45,9 +53,9 @@ export default function Vendas() {
   } = useStock();
 
   // Garantir que products seja sempre um array válido
-  const products = Array.isArray(rawProducts)
-    ? rawProducts
-    : rawProducts?.data || [];
+  const products: Product[] = Array.isArray(rawProducts)
+    ? (rawProducts as Product[])
+    : (rawProducts as PaginatedProductsResponse)?.data || [];
 
   // Paginação
   const [sales, setSales] = useState<any[]>([]);
