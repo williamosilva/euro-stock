@@ -453,8 +453,8 @@ export default function ControleEstoque() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal">
             <div className="modal-header">
               <h3>Nova Movimentação</h3>
               <button className="btn-icon" onClick={() => setShowModal(false)}>

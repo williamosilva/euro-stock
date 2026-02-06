@@ -633,8 +633,8 @@ export default function Vendas() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal modal-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal modal-lg">
             <div className="modal-header">
               <h3>Nova Venda</h3>
               <button className="btn-icon" onClick={() => setShowModal(false)}>

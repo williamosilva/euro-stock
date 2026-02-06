@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, type FormEvent } from "react";
+import { useState, useEffect, useCallback, useRef, type FormEvent } from "react";
 import { useStock } from "../context/StockContext";
 import { api } from "../services/api";
 import type { QuoteItem, PaymentCondition, Product } from "../data/mockData";
@@ -18,6 +18,8 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  Package,
 } from "lucide-react";
 
 const PAYMENT_METHODS = [
@@ -49,6 +51,7 @@ export default function Orcamentos() {
   const {
     products: rawProducts,
     addQuote,
+    addProduct,
     loadingProducts,
     refreshProducts,
   } = useStock();
@@ -145,6 +148,22 @@ export default function Orcamentos() {
   const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedQty, setSelectedQty] = useState(1);
 
+  // New product modal
+  const pendingProductName = useRef<string | null>(null);
+  const [showNewProduct, setShowNewProduct] = useState(false);
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [apiCategories, setApiCategories] = useState<{ id: number; name: string }[]>([]);
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+  const [productForm, setProductForm] = useState({
+    name: "",
+    category: "",
+    quantity: 0,
+    minQuantity: 0,
+    price: 0,
+    unit: "un",
+  });
+
   // Add payment condition form
   const [condMethod, setCondMethod] = useState(PAYMENT_METHODS[0]);
   const [condInstallments, setCondInstallments] = useState(1);
@@ -205,6 +224,50 @@ export default function Orcamentos() {
     setCondDiscount(0);
     setShowModal(true);
   }
+
+  async function loadCategories() {
+    setLoadingCategories(true);
+    try {
+      const cats = await api.getCategories();
+      setApiCategories(cats);
+    } catch (error) {
+      console.error("Erro ao carregar categorias:", error);
+    } finally {
+      setLoadingCategories(false);
+    }
+  }
+
+  function openNewProduct() {
+    setProductForm({ name: "", category: "", quantity: 0, minQuantity: 0, price: 0, unit: "un" });
+    setShowNewProduct(true);
+    loadCategories();
+  }
+
+  async function handleSaveProduct(e: FormEvent) {
+    e.preventDefault();
+    setSavingProduct(true);
+    try {
+      pendingProductName.current = productForm.name;
+      await addProduct(productForm);
+      await refreshProducts();
+      setShowNewProduct(false);
+    } catch {
+      pendingProductName.current = null;
+      alert("Erro ao criar produto");
+    } finally {
+      setSavingProduct(false);
+    }
+  }
+
+  // Auto-select newly created product when products list updates
+  useEffect(() => {
+    if (!pendingProductName.current) return;
+    const created = products.find((p) => p.name === pendingProductName.current);
+    if (created) {
+      setSelectedProductId(String(created.id));
+      pendingProductName.current = null;
+    }
+  }, [products]);
 
   function addItem() {
     const product = products.find((p) => String(p.id) === selectedProductId);
@@ -574,8 +637,8 @@ export default function Orcamentos() {
       </div>
 
       {showModal && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="modal modal-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-overlay">
+          <div className="modal modal-xl">
             <div className="modal-header">
               <h3>Novo Orçamento</h3>
               <button className="btn-icon" onClick={() => setShowModal(false)}>
@@ -635,6 +698,14 @@ export default function Orcamentos() {
                       </option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    className="btn-secondary btn-sm"
+                    onClick={openNewProduct}
+                    title="Criar novo produto"
+                  >
+                    <Package size={16} />
+                  </button>
                   <input
                     type="number"
                     min="1"
@@ -883,6 +954,140 @@ export default function Orcamentos() {
 
       {pdfQuote && (
         <QuotePDF quote={pdfQuote} onClose={() => setPdfQuote(null)} />
+      )}
+
+      {showNewProduct && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Novo Produto</h3>
+              <button className="btn-icon" onClick={() => setShowNewProduct(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveProduct} className="modal-form">
+              <div className="form-group">
+                <label>Nome do Produto</label>
+                <input
+                  type="text"
+                  value={productForm.name}
+                  onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
+                  required
+                  disabled={savingProduct}
+                />
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Categoria</label>
+                  <div className="category-input-wrapper">
+                    <input
+                      type="text"
+                      value={productForm.category}
+                      onChange={(e) => setProductForm({ ...productForm, category: e.target.value })}
+                      onFocus={() => setShowCategoryDropdown(true)}
+                      onBlur={() => setTimeout(() => setShowCategoryDropdown(false), 200)}
+                      placeholder={loadingCategories ? "Carregando..." : "Selecione ou digite"}
+                      required
+                      disabled={savingProduct}
+                    />
+                    <ChevronDown size={16} className="category-dropdown-icon" />
+                    {showCategoryDropdown && apiCategories.length > 0 && (
+                      <div className="category-dropdown">
+                        {apiCategories
+                          .filter((cat) => cat.name.toLowerCase().includes(productForm.category.toLowerCase()))
+                          .map((cat) => (
+                            <div
+                              key={cat.id}
+                              className={`category-option ${productForm.category === cat.name ? "selected" : ""}`}
+                              onMouseDown={() => setProductForm({ ...productForm, category: cat.name })}
+                            >
+                              {cat.name}
+                            </div>
+                          ))}
+                        {productForm.category &&
+                          !apiCategories.some((cat) => cat.name.toLowerCase() === productForm.category.toLowerCase()) && (
+                            <div className="category-option new-category">
+                              Criar: "{productForm.category}"
+                            </div>
+                          )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Unidade</label>
+                  <select
+                    value={productForm.unit}
+                    onChange={(e) => setProductForm({ ...productForm, unit: e.target.value })}
+                    disabled={savingProduct}
+                  >
+                    <option value="un">Unidade</option>
+                    <option value="kit">Kit</option>
+                    <option value="saco">Saco</option>
+                    <option value="cx">Caixa</option>
+                    <option value="m">Metro</option>
+                  </select>
+                </div>
+              </div>
+              <div className="form-row">
+                <div className="form-group">
+                  <label>Quantidade</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={productForm.quantity}
+                    onChange={(e) => setProductForm({ ...productForm, quantity: Number(e.target.value) })}
+                    required
+                    disabled={savingProduct}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Qtd. Mínima</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={productForm.minQuantity}
+                    onChange={(e) => setProductForm({ ...productForm, minQuantity: Number(e.target.value) })}
+                    required
+                    disabled={savingProduct}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Preço Unitário (R$)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={productForm.price}
+                  onChange={(e) => setProductForm({ ...productForm, price: Number(e.target.value) })}
+                  required
+                  disabled={savingProduct}
+                />
+              </div>
+              <div className="modal-actions">
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  onClick={() => setShowNewProduct(false)}
+                  disabled={savingProduct}
+                >
+                  Cancelar
+                </button>
+                <button type="submit" className="btn-primary" disabled={savingProduct}>
+                  {savingProduct ? (
+                    <>
+                      <Loader2 size={16} className="spin" />
+                      Criando...
+                    </>
+                  ) : (
+                    "Criar Produto"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );
