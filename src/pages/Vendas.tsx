@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, type FormEvent } from "react";
 import { useStock } from "../context/StockContext";
 import { api } from "../services/api";
 import type { SaleItem, Installment, Product, Sale } from "../data/mockData";
+import Tooltip from "../components/Tooltip";
 import {
   Plus,
   X,
@@ -93,7 +94,7 @@ export default function Vendas() {
   ]);
 
   const [items, setItems] = useState<SaleItem[]>([]);
-  const [selectedProductId, setSelectedProductId] = useState(0);
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedQty, setSelectedQty] = useState(1);
 
   // Carregar produtos iniciais
@@ -169,20 +170,20 @@ export default function Vendas() {
       { number: 2, value: 0, dueDate: "" },
     ]);
     setItems([]);
-    setSelectedProductId(products[0]?.id || 0);
+    setSelectedProductId(String(products[0]?.id ?? ""));
     setSelectedQty(1);
     setShowModal(true);
   }
 
   function addItem() {
-    const product = products.find((p) => p.id === selectedProductId);
+    const product = products.find((p) => String(p.id) === selectedProductId);
     if (!product || selectedQty <= 0) return;
 
-    const existing = items.find((i) => i.productId === selectedProductId);
+    const existing = items.find((i) => String(i.productId) === selectedProductId);
     if (existing) {
       setItems(
         items.map((i) =>
-          i.productId === selectedProductId
+          String(i.productId) === selectedProductId
             ? { ...i, quantity: i.quantity + selectedQty }
             : i,
         ),
@@ -534,7 +535,7 @@ export default function Vendas() {
             ) : (
               sales.map((sale) => (
                 <tr key={sale.id}>
-                  <td className="td-name">#{sale.id}</td>
+                  <td className="td-name">#{sale.index}</td>
                   <td>{formatDate(sale.date)}</td>
                   <td>{sale.customer}</td>
                   <td>
@@ -551,11 +552,21 @@ export default function Vendas() {
                   </td>
                   <td>
                     <div className="sale-items-list">
-                      {sale.items.map((item, idx) => (
-                        <span key={idx} className="badge">
-                          {item.quantity}x {item.productName}
-                        </span>
-                      ))}
+                      <span className="badge">
+                        {sale.items[0].quantity}x {sale.items[0].productName}
+                      </span>
+                      {sale.items.length > 1 && (
+                        <Tooltip
+                          text={sale.items
+                            .slice(1)
+                            .map((i) => `${i.quantity}x ${i.productName}`)
+                            .join(", ")}
+                        >
+                          <span className="badge badge-more">
+                            +{sale.items.length - 1}
+                          </span>
+                        </Tooltip>
+                      )}
                     </div>
                   </td>
                   <td className="td-name">
@@ -691,9 +702,7 @@ export default function Vendas() {
                 <div className="sale-add-row">
                   <select
                     value={selectedProductId}
-                    onChange={(e) =>
-                      setSelectedProductId(Number(e.target.value))
-                    }
+                    onChange={(e) => setSelectedProductId(e.target.value)}
                     className="sale-product-select"
                   >
                     {products.map((p) => (

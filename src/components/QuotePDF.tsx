@@ -1,6 +1,6 @@
 import { createPortal } from 'react-dom';
 import type { Quote } from '../data/mockData';
-import { X, Printer, Flame } from 'lucide-react';
+import { X, Printer } from 'lucide-react';
 
 interface QuotePDFProps {
   quote: Quote;
@@ -24,7 +24,7 @@ export default function QuotePDF({ quote, onClose }: QuotePDFProps) {
   return createPortal(
     <div className="pdf-overlay">
       <div className="pdf-toolbar no-print">
-        <span>Visualização do Orçamento #{quote.id}</span>
+        <span>Visualização do Orçamento #{quote.index}</span>
         <div className="pdf-toolbar-actions">
           <button className="btn-secondary btn-sm" onClick={handlePrint}>
             <Printer size={16} />
@@ -41,15 +41,14 @@ export default function QuotePDF({ quote, onClose }: QuotePDFProps) {
           {/* Header */}
           <div className="pdf-header">
             <div className="pdf-logo">
-              <Flame size={32} />
               <div>
                 <h1>Euro Grill</h1>
-                <span>Churrasqueiras e Acessórios</span>
+                <span>Churrasqueiras & Acessórios</span>
               </div>
             </div>
             <div className="pdf-doc-info">
               <h2>ORÇAMENTO</h2>
-              <p>Nº {String(quote.id).padStart(4, '0')}</p>
+              <p>Nº {String(quote.index ?? quote.id).padStart(4, '0')}</p>
             </div>
           </div>
 

@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Flame, Package, ClipboardList, ShoppingCart, FileText, LogOut, User } from 'lucide-react';
+import { Package, ClipboardList, ShoppingCart, FileText, LogOut, User } from 'lucide-react';
 
 export default function TopBar() {
   const { userName, logout } = useAuth();
@@ -15,7 +15,6 @@ export default function TopBar() {
     <header className="topbar">
       <div className="topbar-left">
         <div className="topbar-brand">
-          <Flame size={24} />
           <span>Euro Grill</span>
         </div>
 

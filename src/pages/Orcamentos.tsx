@@ -3,6 +3,7 @@ import { useStock } from "../context/StockContext";
 import { api } from "../services/api";
 import type { QuoteItem, PaymentCondition, Product } from "../data/mockData";
 import QuotePDF from "../components/QuotePDF";
+import Tooltip from "../components/Tooltip";
 import {
   Plus,
   X,
@@ -141,7 +142,7 @@ export default function Orcamentos() {
   >([]);
 
   // Add item form
-  const [selectedProductId, setSelectedProductId] = useState(0);
+  const [selectedProductId, setSelectedProductId] = useState("");
   const [selectedQty, setSelectedQty] = useState(1);
 
   // Add payment condition form
@@ -197,7 +198,7 @@ export default function Orcamentos() {
     setObservation("");
     setItems([]);
     setPaymentConditions([]);
-    setSelectedProductId(products[0]?.id || 0);
+    setSelectedProductId(String(products[0]?.id ?? ""));
     setSelectedQty(1);
     setCondMethod(PAYMENT_METHODS[0]);
     setCondInstallments(1);
@@ -206,14 +207,14 @@ export default function Orcamentos() {
   }
 
   function addItem() {
-    const product = products.find((p) => p.id === selectedProductId);
+    const product = products.find((p) => String(p.id) === selectedProductId);
     if (!product || selectedQty <= 0) return;
 
-    const existing = items.find((i) => i.productId === selectedProductId);
+    const existing = items.find((i) => String(i.productId) === selectedProductId);
     if (existing) {
       setItems(
         items.map((i) =>
-          i.productId === selectedProductId
+          String(i.productId) === selectedProductId
             ? { ...i, quantity: i.quantity + selectedQty }
             : i,
         ),
@@ -473,18 +474,25 @@ export default function Orcamentos() {
             ) : (
               quotes.map((quote) => (
                 <tr key={quote.id}>
-                  <td className="td-name">#{quote.id}</td>
+                  <td className="td-name">#{quote.index}</td>
                   <td>{formatDate(quote.date)}</td>
                   <td>{quote.customer}</td>
                   <td>
                     <div className="sale-items-list">
-                      {quote.items.slice(0, 2).map((item: any, idx: number) => (
-                        <span key={idx} className="badge">
-                          {item.quantity}x {item.productName}
-                        </span>
-                      ))}
-                      {quote.items.length > 2 && (
-                        <span className="badge">+{quote.items.length - 2}</span>
+                      <span className="badge">
+                        {quote.items[0].quantity}x {quote.items[0].productName}
+                      </span>
+                      {quote.items.length > 1 && (
+                        <Tooltip
+                          text={quote.items
+                            .slice(1)
+                            .map((i: any) => `${i.quantity}x ${i.productName}`)
+                            .join(", ")}
+                        >
+                          <span className="badge badge-more">
+                            +{quote.items.length - 1}
+                          </span>
+                        </Tooltip>
                       )}
                     </div>
                   </td>
@@ -613,9 +621,7 @@ export default function Orcamentos() {
                 <div className="sale-add-row">
                   <select
                     value={selectedProductId}
-                    onChange={(e) =>
-                      setSelectedProductId(Number(e.target.value))
-                    }
+                    onChange={(e) => setSelectedProductId(e.target.value)}
                     className="sale-product-select"
                   >
                     {products.map((p) => (

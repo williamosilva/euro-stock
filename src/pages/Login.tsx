@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Flame, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -34,9 +34,6 @@ export default function Login() {
     <div className="login-page">
       <div className="login-shell">
         <div className="login-brand">
-          <div className="login-logo">
-            <Flame size={28} />
-          </div>
           <div className="login-brand-text">
             <p className="login-eyebrow">Euro Grill</p>
             <h1>Gestão de Estoque</h1>

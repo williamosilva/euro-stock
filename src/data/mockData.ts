@@ -34,6 +34,7 @@ export interface Installment {
 
 export interface Sale {
   id: number;
+  index?: number;
   items: SaleItem[];
   date: string;
   customer: string;
@@ -68,6 +69,7 @@ export interface PaymentCondition {
 
 export interface Quote {
   id: number;
+  index?: number;
   customer: string;
   date: string;
   validUntil: string;
