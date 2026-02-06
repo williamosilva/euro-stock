@@ -113,6 +113,11 @@ class ApiService {
         console.error("Request failed:", endpoint, error);
 
         if (response.status === 401) {
+          // Without token or refresh token, don't attempt refresh loop
+          if (!this.token || !this.refreshToken) {
+            throw new Error(error.message || "Unauthorized");
+          }
+
           if (this.isRefreshing) {
             console.log("Refresh in progress, queuing request:", endpoint);
             return new Promise<string>((resolve, reject) => {
