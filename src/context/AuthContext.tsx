@@ -19,12 +19,23 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+const trustedOrigins = (import.meta.env.VITE_TRUSTED_ORIGINS || "")
+  .split(",")
+  .map((o: string) => o.trim())
+  .filter(Boolean);
+
+const isTrustedOrigin = trustedOrigins.includes(window.location.origin);
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(isTrustedOrigin);
+  const [user, setUser] = useState<User | null>(
+    isTrustedOrigin ? { id: 0, email: "", name: "Visitante" } : null,
+  );
+  const [loading, setLoading] = useState(!isTrustedOrigin);
 
   useEffect(() => {
+    if (isTrustedOrigin) return;
+
     // Register callback for forced logout (when refresh token fails)
     api.onLogout(() => {
       setIsAuthenticated(false);

@@ -9,13 +9,20 @@ import Orcamentos from './pages/Orcamentos';
 import Layout from './components/Layout';
 import ProtectedRoute from './components/ProtectedRoute';
 
+const trustedOrigins = (import.meta.env.VITE_TRUSTED_ORIGINS || "")
+  .split(",")
+  .map((o: string) => o.trim())
+  .filter(Boolean);
+
+const isTrustedOrigin = trustedOrigins.includes(window.location.origin);
+
 function App() {
   return (
     <AuthProvider>
       <StockProvider>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<Login />} />
+            <Route path="/" element={isTrustedOrigin ? <Navigate to="/estoque" replace /> : <Login />} />
             <Route element={<ProtectedRoute />}>
               <Route element={<Layout />}>
                 <Route path="/estoque" element={<Estoque />} />

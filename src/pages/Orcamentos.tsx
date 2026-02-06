@@ -210,7 +210,9 @@ export default function Orcamentos() {
     const product = products.find((p) => String(p.id) === selectedProductId);
     if (!product || selectedQty <= 0) return;
 
-    const existing = items.find((i) => String(i.productId) === selectedProductId);
+    const existing = items.find(
+      (i) => String(i.productId) === selectedProductId,
+    );
     if (existing) {
       setItems(
         items.map((i) =>
@@ -683,7 +685,7 @@ export default function Orcamentos() {
                             />
                           </div>
                           <div className="quote-field">
-                            <label>Preço Unit.</label>
+                            <label>Preço Venda.</label>
                             <input
                               type="number"
                               min="0"
