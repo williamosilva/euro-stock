@@ -90,7 +90,7 @@ export default function Orcamentos() {
       paymentMethod?: string,
       validityStatus?: string,
     ) => {
-      if (!api.getToken()) return;
+      if (!api.canRequest()) return;
       setLoadingQuotes(true);
       try {
         const response = (await api.getQuotes(

@@ -1,5 +1,11 @@
 const API_URL = import.meta.env.VITE_API_URL;
 
+const trustedOrigins = (import.meta.env.VITE_TRUSTED_ORIGINS || "")
+  .split(",")
+  .map((o: string) => o.trim())
+  .filter(Boolean);
+const isTrustedOrigin = trustedOrigins.includes(window.location.origin);
+
 interface LoginResponse {
   user: {
     id: number;
@@ -63,6 +69,10 @@ class ApiService {
 
   getToken() {
     return this.token;
+  }
+
+  canRequest() {
+    return !!this.token || isTrustedOrigin;
   }
 
   getRefreshToken() {

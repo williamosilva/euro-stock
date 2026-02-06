@@ -2,12 +2,6 @@ import { createContext, useContext, useState, useEffect, useCallback } from "rea
 import type { ReactNode } from "react";
 import { api } from "../services/api";
 import { useAuth } from "./AuthContext";
-
-const trustedOrigins = (import.meta.env.VITE_TRUSTED_ORIGINS || "")
-  .split(",")
-  .map((o: string) => o.trim())
-  .filter(Boolean);
-const isTrustedOrigin = trustedOrigins.includes(window.location.origin);
 import type {
   Product,
   StockMovement,
@@ -68,7 +62,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
   const [loadingQuotes, setLoadingQuotes] = useState(false);
 
   const refreshProducts = useCallback(async () => {
-    if (!api.getToken() && !isTrustedOrigin) return;
+    if (!api.canRequest()) return;
     setLoadingProducts(true);
     try {
       const productsData = await api.getStock();
@@ -81,7 +75,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshMovements = useCallback(async () => {
-    if (!api.getToken() && !isTrustedOrigin) return;
+    if (!api.canRequest()) return;
     setLoadingMovements(true);
     try {
       const movementsData = await api.getMovements();
@@ -94,7 +88,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshSales = useCallback(async () => {
-    if (!api.getToken() && !isTrustedOrigin) return;
+    if (!api.canRequest()) return;
     setLoadingSales(true);
     try {
       const salesData = await api.getSales();
@@ -107,7 +101,7 @@ export function StockProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const refreshQuotes = useCallback(async () => {
-    if (!api.getToken() && !isTrustedOrigin) return;
+    if (!api.canRequest()) return;
     setLoadingQuotes(true);
     try {
       const quotesData = await api.getQuotes();

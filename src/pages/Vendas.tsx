@@ -111,7 +111,7 @@ export default function Vendas() {
       installmentType?: string,
       customer?: string,
     ) => {
-      if (!api.getToken()) return;
+      if (!api.canRequest()) return;
       setLoadingSales(true);
       try {
         const response = (await api.getSales(

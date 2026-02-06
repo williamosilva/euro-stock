@@ -80,7 +80,7 @@ export default function ControleEstoque() {
       type?: string,
       productName?: string,
     ) => {
-      if (!api.getToken()) return;
+      if (!api.canRequest()) return;
       setLoadingMovements(true);
       try {
         const response = (await api.getMovements(

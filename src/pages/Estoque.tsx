@@ -85,7 +85,7 @@ export default function Estoque() {
 
   // Carregar estatísticas
   const loadStats = useCallback(async () => {
-    if (!api.getToken()) return;
+    if (!api.canRequest()) return;
     setLoadingStats(true);
     try {
       const data = await api.getStockStats();
@@ -99,7 +99,7 @@ export default function Estoque() {
 
   // Carregar categorias para o filtro
   const loadFilterCategories = useCallback(async () => {
-    if (!api.getToken()) return;
+    if (!api.canRequest()) return;
     try {
       const cats = await api.getCategories();
       setFilterCategories(cats);
@@ -116,7 +116,7 @@ export default function Estoque() {
       category?: string,
       search?: string,
     ) => {
-      if (!api.getToken()) return;
+      if (!api.canRequest()) return;
       setLoadingProducts(true);
       try {
         const response = (await api.getStock(
